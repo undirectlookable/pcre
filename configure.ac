@@ -9,9 +9,9 @@ dnl The PCRE_PRERELEASE feature is for identifying release candidates. It might
 dnl be defined as -RC2, for example. For real releases, it should be empty.
 
 m4_define(pcre_major, [8])
-m4_define(pcre_minor, [01])
+m4_define(pcre_minor, [02])
 m4_define(pcre_prerelease, [])
-m4_define(pcre_date, [2010-01-19])
+m4_define(pcre_date, [2010-03-19])
 
 # Libtool shared library interface versions (current:revision:age)
 m4_define(libpcre_version, [0:1:0])
@@ -104,11 +104,13 @@ then
   htmldir='${docdir}/html'
 fi
 
-# Handle --disable-cpp
+# Handle --disable-cpp. The substitution of enable_cpp is needed for use in
+# pcre-config.
 AC_ARG_ENABLE(cpp,
               AS_HELP_STRING([--disable-cpp],
                              [disable C++ support]),
               , enable_cpp=yes)
+AC_SUBST(enable_cpp)
 
 # Handle --enable-rebuild-chartables
 AC_ARG_ENABLE(rebuild-chartables,
@@ -352,7 +354,7 @@ AH_TEMPLATE(HAVE_STRTOLL, [Define to 1 if you have `strtoll'.])
 AH_TEMPLATE(HAVE__STRTOI64, [Define to 1 if you have `_strtoi64'.])
 AH_TEMPLATE(HAVE_STRTOIMAX, [Define to 1 if you have `strtoimax'.])
 have_strto_fn=0
-for fn in srtoq strtoll _strtoi64 strtoimax; do
+for fn in strtoq strtoll _strtoi64 strtoimax; do
   AC_MSG_CHECKING([for $fn])
   if test "$fn" = strtoimax; then
     include=stdint.h
