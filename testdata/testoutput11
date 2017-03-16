@@ -501,6 +501,10 @@ No match
 No match
 
 /(A (A|B(*ACCEPT)|C) D)(E)/x
+    AB
+ 0: AB
+ 1: AB
+ 2: B
     ABX
  0: AB
  1: AB
@@ -821,7 +825,10 @@ No match, mark = A
     CB    
 No match, mark = B
     
-/(*MARK:A)(*SKIP:B)(C|X)/K
+/--- Force no study, otherwise mark is not seen. The studied version is in
+     test 2 because it isn't Perl-compatible. ---/
+
+/(*MARK:A)(*SKIP:B)(C|X)/KSS
     C
  0: C
  1: C
@@ -864,9 +871,9 @@ with the handling of backtracking verbs. ---/
     AAAC
  0: AC
 
-/--- Don't loop! ---/
+/--- Don't loop! Force no study, otherwise mark is not seen. ---/
 
-/(*:A)A+(*SKIP:A)(B|Z)/K
+/(*:A)A+(*SKIP:A)(B|Z)/KSS
     AAAC
 No match, mark = A
 
@@ -975,4 +982,281 @@ No match
  0: 
  1: 
 
+/(?i:([^b]))(?1)/
+    aa
+ 0: aa
+ 1: a
+    aA     
+ 0: aA
+ 1: a
+    ** Failers
+ 0: **
+ 1: *
+    ab
+No match
+    aB
+No match
+    Ba
+No match
+    ba
+No match
+
+/^(?&t)*+(?(DEFINE)(?<t>a))\w$/
+    aaaaaaX
+ 0: aaaaaaX
+    ** Failers 
+No match
+    aaaaaa 
+No match
+
+/^(?&t)*(?(DEFINE)(?<t>a))\w$/
+    aaaaaaX
+ 0: aaaaaaX
+    aaaaaa 
+ 0: aaaaaa
+
+/^(a)*+(\w)/
+    aaaaX
+ 0: aaaaX
+ 1: a
+ 2: X
+    YZ 
+ 0: Y
+ 1: <unset>
+ 2: Y
+    ** Failers 
+No match
+    aaaa
+No match
+
+/^(?:a)*+(\w)/
+    aaaaX
+ 0: aaaaX
+ 1: X
+    YZ 
+ 0: Y
+ 1: Y
+    ** Failers 
+No match
+    aaaa
+No match
+
+/^(a)++(\w)/
+    aaaaX
+ 0: aaaaX
+ 1: a
+ 2: X
+    ** Failers 
+No match
+    aaaa
+No match
+    YZ 
+No match
+
+/^(?:a)++(\w)/
+    aaaaX
+ 0: aaaaX
+ 1: X
+    ** Failers 
+No match
+    aaaa
+No match
+    YZ 
+No match
+
+/^(a)?+(\w)/
+    aaaaX
+ 0: aa
+ 1: a
+ 2: a
+    YZ 
+ 0: Y
+ 1: <unset>
+ 2: Y
+
+/^(?:a)?+(\w)/
+    aaaaX
+ 0: aa
+ 1: a
+    YZ 
+ 0: Y
+ 1: Y
+
+/^(a){2,}+(\w)/
+    aaaaX
+ 0: aaaaX
+ 1: a
+ 2: X
+    ** Failers
+No match
+    aaa
+No match
+    YZ 
+No match
+
+/^(?:a){2,}+(\w)/
+    aaaaX
+ 0: aaaaX
+ 1: X
+    ** Failers
+No match
+    aaa
+No match
+    YZ 
+No match
+
+/(a|)*(?1)b/
+    b
+ 0: b
+ 1: 
+    ab
+ 0: ab
+ 1: 
+    aab  
+ 0: aab
+ 1: 
+
+/(a)++(?1)b/
+    ** Failers
+No match
+    ab 
+No match
+    aab
+No match
+
+/(a)*+(?1)b/
+    ** Failers
+No match
+    ab
+No match
+    aab  
+No match
+
+/(?1)(?:(b)){0}/
+    b
+ 0: b
+
+/(foo ( \( ((?:(?> [^()]+ )|(?2))*) \) ) )/x
+    foo(bar(baz)+baz(bop))
+ 0: foo(bar(baz)+baz(bop))
+ 1: foo(bar(baz)+baz(bop))
+ 2: (bar(baz)+baz(bop))
+ 3: bar(baz)+baz(bop)
+
+/(A (A|B(*ACCEPT)|C) D)(E)/x
+    AB
+ 0: AB
+ 1: AB
+ 2: B
+
+/\A.*?(?:a|b(*THEN)c)/
+    ba
+ 0: ba
+
+/\A.*?(?:a|bc)/
+    ba
+ 0: ba
+
+/\A.*?(a|b(*THEN)c)/
+    ba
+ 0: ba
+ 1: a
+
+/\A.*?(a|bc)/
+    ba
+ 0: ba
+ 1: a
+
+/\A.*?(?:a|b(*THEN)c)++/
+    ba
+ 0: ba
+
+/\A.*?(?:a|bc)++/
+    ba
+ 0: ba
+
+/\A.*?(a|b(*THEN)c)++/
+    ba
+ 0: ba
+ 1: a
+
+/\A.*?(a|bc)++/
+    ba
+ 0: ba
+ 1: a
+
+/\A.*?(?:a|b(*THEN)c|d)/
+    ba
+ 0: ba
+
+/\A.*?(?:a|bc|d)/
+    ba
+ 0: ba
+
+/(?:(b))++/
+    beetle
+ 0: b
+ 1: b
+
+/(?(?=(a(*ACCEPT)z))a)/
+    a
+ 0: a
+ 1: a
+
+/^(a)(?1)+ab/
+    aaaab
+ 0: aaaab
+ 1: a
+    
+/^(a)(?1)++ab/
+    aaaab
+No match
+
+/^(?=a(*:M))aZ/K
+    aZbc
+ 0: aZ
+MK: M
+
+/^(?!(*:M)b)aZ/K
+    aZbc
+ 0: aZ
+
+/(?(DEFINE)(a))?b(?1)/
+    backgammon
+ 0: ba
+
+/^\N+/
+    abc\ndef
+ 0: abc
+    
+/^\N{1,}/
+    abc\ndef 
+ 0: abc
+
+/(?(R)a+|(?R)b)/
+    aaaabcde
+ 0: aaaab
+
+/(?(R)a+|((?R))b)/
+    aaaabcde
+ 0: aaaab
+ 1: aaaa
+
+/((?(R)a+|(?1)b))/
+    aaaabcde
+ 0: aaaab
+ 1: aaaab
+
+/((?(R1)a+|(?1)b))/
+    aaaabcde
+ 0: aaaab
+ 1: aaaab
+
+/a(*:any 
+name)/K
+    abc
+ 0: a
+MK: any 
+name
+    
 /-- End of testinput11 --/

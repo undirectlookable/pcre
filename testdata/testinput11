@@ -246,6 +246,7 @@
     aaabccc
 
 /(A (A|B(*ACCEPT)|C) D)(E)/x
+    AB
     ABX
     AADE
     ACDE
@@ -403,7 +404,10 @@
     AC
     CB    
     
-/(*MARK:A)(*SKIP:B)(C|X)/K
+/--- Force no study, otherwise mark is not seen. The studied version is in
+     test 2 because it isn't Perl-compatible. ---/
+
+/(*MARK:A)(*SKIP:B)(C|X)/KSS
     C
     D
      
@@ -435,9 +439,9 @@ with the handling of backtracking verbs. ---/
 /A(*:A)A+(*SKIP:A)(B|Z) | AC/xK
     AAAC
 
-/--- Don't loop! ---/
+/--- Don't loop! Force no study, otherwise mark is not seen. ---/
 
-/(*:A)A+(*SKIP:A)(B|Z)/K
+/(*:A)A+(*SKIP:A)(B|Z)/KSS
     AAAC
 
 /--- This should succeed, as a non-existent skip name disables the skip ---/ 
@@ -507,4 +511,163 @@ however, we need the complication for Perl. ---/
 /(?P<abn>(?P=abn)xxx|)+/
     xxx
 
+/(?i:([^b]))(?1)/
+    aa
+    aA     
+    ** Failers
+    ab
+    aB
+    Ba
+    ba
+
+/^(?&t)*+(?(DEFINE)(?<t>a))\w$/
+    aaaaaaX
+    ** Failers 
+    aaaaaa 
+
+/^(?&t)*(?(DEFINE)(?<t>a))\w$/
+    aaaaaaX
+    aaaaaa 
+
+/^(a)*+(\w)/
+    aaaaX
+    YZ 
+    ** Failers 
+    aaaa
+
+/^(?:a)*+(\w)/
+    aaaaX
+    YZ 
+    ** Failers 
+    aaaa
+
+/^(a)++(\w)/
+    aaaaX
+    ** Failers 
+    aaaa
+    YZ 
+
+/^(?:a)++(\w)/
+    aaaaX
+    ** Failers 
+    aaaa
+    YZ 
+
+/^(a)?+(\w)/
+    aaaaX
+    YZ 
+
+/^(?:a)?+(\w)/
+    aaaaX
+    YZ 
+
+/^(a){2,}+(\w)/
+    aaaaX
+    ** Failers
+    aaa
+    YZ 
+
+/^(?:a){2,}+(\w)/
+    aaaaX
+    ** Failers
+    aaa
+    YZ 
+
+/(a|)*(?1)b/
+    b
+    ab
+    aab  
+
+/(a)++(?1)b/
+    ** Failers
+    ab 
+    aab
+
+/(a)*+(?1)b/
+    ** Failers
+    ab
+    aab  
+
+/(?1)(?:(b)){0}/
+    b
+
+/(foo ( \( ((?:(?> [^()]+ )|(?2))*) \) ) )/x
+    foo(bar(baz)+baz(bop))
+
+/(A (A|B(*ACCEPT)|C) D)(E)/x
+    AB
+
+/\A.*?(?:a|b(*THEN)c)/
+    ba
+
+/\A.*?(?:a|bc)/
+    ba
+
+/\A.*?(a|b(*THEN)c)/
+    ba
+
+/\A.*?(a|bc)/
+    ba
+
+/\A.*?(?:a|b(*THEN)c)++/
+    ba
+
+/\A.*?(?:a|bc)++/
+    ba
+
+/\A.*?(a|b(*THEN)c)++/
+    ba
+
+/\A.*?(a|bc)++/
+    ba
+
+/\A.*?(?:a|b(*THEN)c|d)/
+    ba
+
+/\A.*?(?:a|bc|d)/
+    ba
+
+/(?:(b))++/
+    beetle
+
+/(?(?=(a(*ACCEPT)z))a)/
+    a
+
+/^(a)(?1)+ab/
+    aaaab
+    
+/^(a)(?1)++ab/
+    aaaab
+
+/^(?=a(*:M))aZ/K
+    aZbc
+
+/^(?!(*:M)b)aZ/K
+    aZbc
+
+/(?(DEFINE)(a))?b(?1)/
+    backgammon
+
+/^\N+/
+    abc\ndef
+    
+/^\N{1,}/
+    abc\ndef 
+
+/(?(R)a+|(?R)b)/
+    aaaabcde
+
+/(?(R)a+|((?R))b)/
+    aaaabcde
+
+/((?(R)a+|(?1)b))/
+    aaaabcde
+
+/((?(R1)a+|(?1)b))/
+    aaaabcde
+
+/a(*:any 
+name)/K
+    abc
+    
 /-- End of testinput11 --/

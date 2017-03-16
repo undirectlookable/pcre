@@ -3973,13 +3973,13 @@
     ac
     bbbbc
 
-/abc/>testsavedregex
+/abc/SS>testsavedregex
 <testsavedregex
     abc
     *** Failers
     bca
     
-/abc/F>testsavedregex
+/abc/FSS>testsavedregex
 <testsavedregex
     abc
     *** Failers
@@ -4606,5 +4606,97 @@
     abc\>3
     abc\>4
     abc\>-4 
+
+/^(?:a)++\w/
+     aaaab
+     ** Failers 
+     aaaa 
+     bbb 
+
+/^(?:aa|(?:a)++\w)/
+     aaaab
+     aaaa 
+     ** Failers 
+     bbb 
+
+/^(?:a)*+\w/
+     aaaab
+     bbb 
+     ** Failers 
+     aaaa 
+
+/^(a)++\w/
+     aaaab
+     ** Failers 
+     aaaa 
+     bbb 
+
+/^(a|)++\w/
+     aaaab
+     ** Failers 
+     aaaa 
+     bbb 
+
+/(?=abc){3}abc/+
+    abcabcabc
+    ** Failers
+    xyz  
+    
+/(?=abc)+abc/+
+    abcabcabc
+    ** Failers
+    xyz  
+    
+/(?=abc)++abc/+
+    abcabcabc
+    ** Failers
+    xyz  
+    
+/(?=abc){0}xyz/
+    xyz 
+
+/(?=abc){1}xyz/
+    ** Failers
+    xyz 
+    
+/(?=(a))?./
+    ab
+    bc
+      
+/(?=(a))??./
+    ab
+    bc
+
+/^(?=(a)){0}b(?1)/
+    backgammon
+
+/^(?=(?1))?[az]([abc])d/
+    abd 
+    zcdxx 
+
+/^(?!a){0}\w+/
+    aaaaa
+
+/(?<=(abc))?xyz/
+    abcxyz
+    pqrxyz 
+
+/((?2))((?1))/
+    abc
+
+/(?(R)a+|(?R)b)/
+    aaaabcde
+
+/(?(R)a+|((?R))b)/
+    aaaabcde
+
+/((?(R)a+|(?1)b))/
+    aaaabcde
+
+/((?(R2)a+|(?1)b))/
+    aaaabcde
+
+/(?(R)a*(?1)|((?R))b)/
+    aaaabcde
 
 /-- End of testinput7 --/

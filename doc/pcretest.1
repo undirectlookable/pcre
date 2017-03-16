@@ -4,7 +4,7 @@ pcretest - a program for testing Perl-compatible regular expressions.
 .SH SYNOPSIS
 .rs
 .sp
-.B pcretest "[options] [source] [destination]"
+.B pcretest "[options] [input file [output file]]"
 .sp
 \fBpcretest\fP was written as a test program for the PCRE regular expression
 library itself, but it can also be used for experimenting with regular
@@ -18,22 +18,25 @@ options, see the
 .\" HREF
 \fBpcreapi\fP
 .\"
-documentation.
+documentation. The input for \fBpcretest\fP is a sequence of regular expression
+patterns and strings to be matched, as described below. The output shows the
+result of each match. Options on the command line and the patterns control PCRE
+options and exactly what is output.
 .
 .
-.SH OPTIONS
+.SH COMMAND LINE OPTIONS
 .rs
 .TP 10
 \fB-b\fP
-Behave as if each regex has the \fB/B\fP (show bytecode) modifier; the internal
-form is output after compilation.
+Behave as if each pattern has the \fB/B\fP (show byte code) modifier; the
+internal form is output after compilation.
 .TP 10
 \fB-C\fP
 Output the version number of the PCRE library, and all available information
 about the optional features that are included, and then exit.
 .TP 10
 \fB-d\fP
-Behave as if each regex has the \fB/D\fP (debug) modifier; the internal
+Behave as if each pattern has the \fB/D\fP (debug) modifier; the internal
 form and information about the compiled pattern is output after compilation;
 \fB-d\fP is equivalent to \fB-b -i\fP.
 .TP 10
@@ -46,7 +49,7 @@ standard \fBpcre_exec()\fP function (more detail is given below).
 Output a brief summary these options and then exit.
 .TP 10
 \fB-i\fP
-Behave as if each regex has the \fB/I\fP modifier; information about the
+Behave as if each pattern has the \fB/I\fP modifier; information about the
 compiled pattern is given after compilation.
 .TP 10
 \fB-M\fP
@@ -56,8 +59,7 @@ calling \fBpcre_exec()\fP repeatedly with different limits.
 .TP 10
 \fB-m\fP
 Output the size of each compiled pattern after it has been compiled. This is
-equivalent to adding \fB/M\fP to each regular expression. For compatibility
-with earlier versions of pcretest, \fB-s\fP is a synonym for \fB-m\fP.
+equivalent to adding \fB/M\fP to each regular expression.
 .TP 10
 \fB-o\fP \fIosize\fP
 Set the number of elements in the output vector that is used when calling
@@ -68,7 +70,7 @@ changed for individual matching calls by including \eO in the data line (see
 below).
 .TP 10
 \fB-p\fP
-Behave as if each regex has the \fB/P\fP modifier; the POSIX wrapper API is
+Behave as if each pattern has the \fB/P\fP modifier; the POSIX wrapper API is
 used to call PCRE. None of the other options has any effect when \fB-p\fP is
 set.
 .TP 10
@@ -76,8 +78,25 @@ set.
 Do not output the version number of \fBpcretest\fP at the start of execution.
 .TP 10
 \fB-S\fP \fIsize\fP
-On Unix-like systems, set the size of the runtime stack to \fIsize\fP
+On Unix-like systems, set the size of the run-time stack to \fIsize\fP
 megabytes.
+.TP 10
+\fB-s\fP
+Behave as if each pattern has the \fB/S\fP modifier; in other words, force each
+pattern to be studied. If the \fB/I\fP or \fB/D\fP option is present on a
+pattern (requesting output about the compiled pattern), information about the
+result of studying is not included when studying is caused only by \fB-s\fP and
+neither \fB-i\fP nor \fB-d\fP is present on the command line. This behaviour
+means that the output from tests that are run with and without \fB-s\fP should
+be identical, except when options that output information about the actual
+running of a match are set. The \fB-M\fP, \fB-t\fP, and \fB-tm\fP options,
+which give information about resources used, are likely to produce different
+output with and without \fB-s\fP. Output may also differ if the \fB/C\fP option
+is present on an individual pattern. This uses callouts to trace the the
+matching process, and this may be different between studied and non-studied
+patterns. If the pattern contains (*MARK) items there may also be differences,
+for the same reason. The \fB-s\fP command line option can be overridden for
+specific patterns that should never be studied (see the /S option below).
 .TP 10
 \fB-t\fP
 Run each compile, study, and match many times with a timer, and output
@@ -154,7 +173,7 @@ pcretest to read the next line as a continuation of the regular expression.
 A pattern may be followed by any number of modifiers, which are mostly single
 characters. Following Perl usage, these are referred to below as, for example,
 "the \fB/i\fP modifier", even though the delimiter of the pattern need not
-always be a slash, and no slash is used when writing modifiers. Whitespace may
+always be a slash, and no slash is used when writing modifiers. White space may
 appear between the final pattern delimiter and the first modifier, and between
 the modifiers themselves.
 .P
@@ -190,10 +209,10 @@ options that do not correspond to anything in Perl:
   \fB/<bsr_unicode>\fP  PCRE_BSR_UNICODE
 .sp
 The modifiers that are enclosed in angle brackets are literal strings as shown,
-including the angle brackets, but the letters can be in either case. This
-example sets multiline matching with CRLF as the line ending sequence:
+including the angle brackets, but the letters within can be in either case.
+This example sets multiline matching with CRLF as the line ending sequence:
 .sp
-  /^abc/m<crlf>
+  /^abc/m<CRLF>
 .sp
 As well as turning on the PCRE_UTF8 option, the \fB/8\fP modifier also causes
 any non-printing characters in output strings to be printed using the
@@ -235,9 +254,20 @@ There are yet more modifiers for controlling the way \fBpcretest\fP
 operates.
 .P
 The \fB/+\fP modifier requests that as well as outputting the substring that
-matched the entire pattern, pcretest should in addition output the remainder of
-the subject string. This is useful for tests where the subject contains
-multiple copies of the same substring.
+matched the entire pattern, \fBpcretest\fP should in addition output the
+remainder of the subject string. This is useful for tests where the subject
+contains multiple copies of the same substring. If the \fB+\fP modifier appears
+twice, the same action is taken for captured substrings. In each case the
+remainder is output on the following line with a plus character following the
+capture number.
+.P
+The \fB/=\fP modifier requests that the values of all potential captured
+parentheses be output after a match by \fBpcre_exec()\fP. By default, only
+those up to the highest one actually used in the match are output
+(corresponding to the return code from \fBpcre_exec()\fP). Values in the
+offsets vector corresponding to higher numbers should be set to -1, and these
+are output as "<unset>". This modifier gives a way of checking that this is
+happening.
 .P
 The \fB/B\fP modifier is a debugging feature. It requests that \fBpcretest\fP
 output a representation of the compiled byte code after compilation. Normally
@@ -287,9 +317,13 @@ which it appears.
 The \fB/M\fP modifier causes the size of memory block used to hold the compiled
 pattern to be output.
 .P
-The \fB/S\fP modifier causes \fBpcre_study()\fP to be called after the
-expression has been compiled, and the results used when the expression is
-matched.
+If the \fB/S\fP modifier appears once, it causes \fBpcre_study()\fP to be
+called after the expression has been compiled, and the results used when the
+expression is matched. If \fB/S\fP appears twice, it suppresses studying, even
+if it was requested externally by the \fB-s\fP command line option. This makes
+it possible to specify that certain patterns are always studied, and others are
+never studied, independently of \fB-s\fP. This feature is used in the test
+files in a few cases where the output is different when the pattern is studied.
 .P
 The \fB/T\fP modifier must be followed by a single digit. It causes a specific
 set of built-in character tables to be passed to \fBpcre_compile()\fP. It is
@@ -327,8 +361,8 @@ ignored.
 .rs
 .sp
 Before each data line is passed to \fBpcre_exec()\fP, leading and trailing
-whitespace is removed, and it is then scanned for \e escapes. Some of these are
-pretty esoteric features, intended for checking out some of the more
+white space is removed, and it is then scanned for \e escapes. Some of these
+are pretty esoteric features, intended for checking out some of the more
 complicated features of PCRE. If you are just testing "ordinary" regular
 expressions, you probably don't need any of these. The following escapes are
 recognized:
@@ -336,7 +370,7 @@ recognized:
   \ea         alarm (BEL, \ex07)
   \eb         backspace (\ex08)
   \ee         escape (\ex27)
-  \ef         formfeed (\ex0c)
+  \ef         form feed (\ex0c)
   \en         newline (\ex0a)
 .\" JOIN
   \eqdd       set the PCRE_MATCH_LIMIT limit to dd
@@ -507,18 +541,22 @@ found. This is always the shortest possible match.
 This section describes the output when the normal matching function,
 \fBpcre_exec()\fP, is being used.
 .P
-When a match succeeds, pcretest outputs the list of captured substrings that
-\fBpcre_exec()\fP returns, starting with number 0 for the string that matched
-the whole pattern. Otherwise, it outputs "No match" when the return is
+When a match succeeds, \fBpcretest\fP outputs the list of captured substrings
+that \fBpcre_exec()\fP returns, starting with number 0 for the string that
+matched the whole pattern. Otherwise, it outputs "No match" when the return is
 PCRE_ERROR_NOMATCH, and "Partial match:" followed by the partially matching
 substring when \fBpcre_exec()\fP returns PCRE_ERROR_PARTIAL. (Note that this is
 the entire substring that was inspected during the partial match; it may
 include characters before the actual match start if a lookbehind assertion,
-\eK, \eb, or \eB was involved.) For any other returns, it outputs the PCRE
-negative error number. Here is an example of an interactive \fBpcretest\fP run.
+\eK, \eb, or \eB was involved.) For any other return, \fBpcretest\fP outputs
+the PCRE negative error number and a short descriptive phrase. If the error is
+a failed UTF-8 string check, the byte offset of the start of the failing
+character and the reason code are also output, provided that the size of the
+output vector is at least two. Here is an example of an interactive
+\fBpcretest\fP run.
 .sp
   $ pcretest
-  PCRE version 7.0 30-Nov-2006
+  PCRE version 8.13 2011-04-30
 .sp
     re> /^abc(\ed+)/
   data> abc123
@@ -527,11 +565,11 @@ negative error number. Here is an example of an interactive \fBpcretest\fP run.
   data> xyz
   No match
 .sp
-Note that unset capturing substrings that are not followed by one that is set
-are not returned by \fBpcre_exec()\fP, and are not shown by \fBpcretest\fP. In
-the following example, there are two capturing substrings, but when the first
-data line is matched, the second, unset substring is not shown. An "internal"
-unset substring is shown as "<unset>", as for the second data line.
+Unset capturing substrings that are not followed by one that is set are not
+returned by \fBpcre_exec()\fP, and are not shown by \fBpcretest\fP. In the
+following example, there are two capturing substrings, but when the first data
+line is matched, the second, unset substring is not shown. An "internal" unset
+substring is shown as "<unset>", as for the second data line.
 .sp
     re> /(a)|(b)/
   data> a
@@ -565,7 +603,13 @@ matching attempts are output in sequence, like this:
    0: ipp
    1: pp
 .sp
-"No match" is output only if the first match attempt fails.
+"No match" is output only if the first match attempt fails. Here is an example
+of a failure message (the offset 4 that is specified by \e>4 is past the end of
+the subject string):
+.sp
+    re> /xyz/
+  data> xyz\e>4
+  Error -24 (bad offset value)
 .P
 If any of the sequences \fB\eC\fP, \fB\eG\fP, or \fB\eL\fP are present in a
 data line that is successfully matched, the substrings extracted by the
@@ -670,9 +714,27 @@ example:
   +10 ^ ^
    0: E*
 .sp
+If a pattern contains (*MARK) items, an additional line is output whenever
+a change of latest mark is passed to the callout function. For example:
+.sp
+    re> /a(*MARK:X)bc/C
+  data> abc
+  --->abc
+   +0 ^       a
+   +1 ^^      (*MARK:X)
+  +10 ^^      b
+  Latest Mark: X
+  +11 ^ ^     c
+  +12 ^  ^
+   0: abc
+.sp
+The mark changes between matching "a" and "b", but stays the same for the rest
+of the match, so nothing more is output. If, as a result of backtracking, the
+mark reverts to being unset, the text "<unset>" is output.
+.P
 The callout function in \fBpcretest\fP returns zero (carry on matching) by
 default, but you can use a \eC item in a data line (as described above) to
-change this.
+change this and other parameters of the callout.
 .P
 Inserting callouts can be helpful when using \fBpcretest\fP to check
 complicated regular expressions. For further information about callouts, see
@@ -702,7 +764,7 @@ function to distinguish printing and non-printing characters.
 .rs
 .sp
 The facilities described in this section are not available when the POSIX
-inteface to PCRE is being used, that is, when the \fB/P\fP pattern modifier is
+interface to PCRE is being used, that is, when the \fB/P\fP pattern modifier is
 specified.
 .P
 When the POSIX interface is not in use, you can cause \fBpcretest\fP to write a
@@ -726,14 +788,14 @@ exact copy of the compiled pattern. If there is additional study data, this
 follows immediately after the compiled pattern. After writing the file,
 \fBpcretest\fP expects to read a new pattern.
 .P
-A saved pattern can be reloaded into \fBpcretest\fP by specifing < and a file
+A saved pattern can be reloaded into \fBpcretest\fP by specifying < and a file
 name instead of a pattern. The name of the file must not contain a < character,
 as otherwise \fBpcretest\fP will interpret the line as a pattern delimited by <
 characters.
 For example:
 .sp
    re> </some/file
-  Compiled regex loaded from /some/file
+  Compiled pattern loaded from /some/file
   No study data
 .sp
 When the pattern has been loaded, \fBpcretest\fP proceeds to read data lines in
@@ -779,6 +841,6 @@ Cambridge CB2 3QH, England.
 .rs
 .sp
 .nf
-Last updated: 21 November 2010
-Copyright (c) 1997-2010 University of Cambridge.
+Last updated: 01 August 2011
+Copyright (c) 1997-2011 University of Cambridge.
 .fi

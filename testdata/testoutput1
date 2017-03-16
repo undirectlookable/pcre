@@ -6666,4 +6666,286 @@ No match
     ?
  0: ?
 
+/(abc)\1/i
+   abc
+No match
+
+/(abc)\1/
+   abc
+No match
+
+/[^a]*/i
+    12abc
+ 0: 12
+    12ABC
+ 0: 12
+
+/[^a]*+/i
+    12abc
+ 0: 12
+    12ABC
+ 0: 12
+
+/[^a]*?X/i
+    ** Failers
+No match
+    12abc
+No match
+    12ABC
+No match
+    
+/[^a]+?X/i   
+    ** Failers
+No match
+    12abc
+No match
+    12ABC
+No match
+
+/[^a]?X/i
+    12aXbcX
+ 0: X
+    12AXBCX
+ 0: X
+    BCX 
+ 0: CX
+
+/[^a]??X/i
+    12aXbcX
+ 0: X
+    12AXBCX
+ 0: X
+    BCX
+ 0: CX
+    
+/[^a]?+X/i
+    12aXbcX
+ 0: cX
+    12AXBCX
+ 0: CX
+    BCX 
+ 0: CX
+
+/[^a]{2,3}/i
+    abcdef
+ 0: bcd
+    ABCDEF  
+ 0: BCD
+
+/[^a]{2,3}?/i
+    abcdef
+ 0: bc
+    ABCDEF  
+ 0: BC
+
+/[^a]{2,3}+/i
+    abcdef
+ 0: bcd
+    ABCDEF  
+ 0: BCD
+
+/((a|)+)+Z/
+    Z
+ 0: Z
+ 1: 
+ 2: 
+
+/(a)b|(a)c/
+    ac
+ 0: ac
+ 1: <unset>
+ 2: a
+
+/(?>(a))b|(a)c/
+    ac
+ 0: ac
+ 1: <unset>
+ 2: a
+
+/(?=(a))ab|(a)c/
+    ac
+ 0: ac
+ 1: <unset>
+ 2: a
+
+/((?>(a))b|(a)c)/
+    ac
+ 0: ac
+ 1: ac
+ 2: <unset>
+ 3: a
+
+/((?>(a))b|(a)c)++/
+    ac
+ 0: ac
+ 1: ac
+ 2: <unset>
+ 3: a
+
+/(?:(?>(a))b|(a)c)++/
+    ac
+ 0: ac
+ 1: <unset>
+ 2: a
+
+/(?=(?>(a))b|(a)c)(..)/
+    ac
+ 0: ac
+ 1: <unset>
+ 2: a
+ 3: ac
+
+/(?>(?>(a))b|(a)c)/
+    ac
+ 0: ac
+ 1: <unset>
+ 2: a
+
+/(?:(?>([ab])))+a=/+
+    =ba=
+ 0: ba=
+ 0+ 
+ 1: b
+
+/(?>([ab]))+a=/+
+    =ba=
+ 0: ba=
+ 0+ 
+ 1: b
+
+/((?>(a+)b)+(aabab))/
+    aaaabaaabaabab
+ 0: aaaabaaabaabab
+ 1: aaaabaaabaabab
+ 2: aaa
+ 3: aabab
+
+/(?>a+|ab)+?c/
+    aabc
+No match
+
+/(?>a+|ab)+c/
+    aabc
+No match
+
+/(?:a+|ab)+c/
+    aabc
+ 0: aabc
+
+/(?(?=(a))a)/
+    a
+ 0: a
+ 1: a
+
+/(?(?=(a))a)(b)/
+    ab
+ 0: ab
+ 1: a
+ 2: b
+
+/^(?:a|ab)++c/
+    aaaabc
+No match
+
+/^(?>a|ab)++c/
+    aaaabc
+No match
+
+/^(?:a|ab)+c/
+    aaaabc
+ 0: aaaabc
+
+/(?=abc){3}abc/+
+    abcabcabc
+ 0: abc
+ 0+ abcabc
+    ** Failers
+No match
+    xyz  
+No match
+    
+/(?=abc)+abc/+
+    abcabcabc
+ 0: abc
+ 0+ abcabc
+    ** Failers
+No match
+    xyz  
+No match
+    
+/(?=abc)++abc/+
+    abcabcabc
+ 0: abc
+ 0+ abcabc
+    ** Failers
+No match
+    xyz  
+No match
+    
+/(?=abc){0}xyz/
+    xyz 
+ 0: xyz
+
+/(?=abc){1}xyz/
+    ** Failers
+No match
+    xyz 
+No match
+    
+/(?=(a))?./
+    ab
+ 0: a
+ 1: a
+    bc
+ 0: b
+      
+/(?=(a))??./
+    ab
+ 0: a
+    bc
+ 0: b
+
+/^(?=(a)){0}b(?1)/
+    backgammon
+ 0: ba
+
+/^(?=(?1))?[az]([abc])d/
+    abd 
+ 0: abd
+ 1: b
+    zcdxx 
+ 0: zcd
+ 1: c
+
+/^(?!a){0}\w+/
+    aaaaa
+ 0: aaaaa
+
+/(?<=(abc))?xyz/
+    abcxyz
+ 0: xyz
+ 1: abc
+    pqrxyz 
+ 0: xyz
+
+/^[\g<a>]+/
+    ggg<<<aaa>>>
+ 0: ggg<<<aaa>>>
+    ** Failers
+No match
+    \\ga  
+No match
+    
+/^[\ga]+/
+    gggagagaxyz 
+ 0: gggagaga
+    
+/^[:a[:digit:]]+/
+    aaaa444:::Z 
+ 0: aaaa444:::
+
+/^[:a[:digit:]:b]+/
+    aaaa444:::bbbZ 
+ 0: aaaa444:::bbb
+
 /-- End of testinput1 --/

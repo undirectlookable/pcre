@@ -287,6 +287,7 @@ LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
+MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -317,6 +318,7 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
@@ -471,11 +473,12 @@ EXTRA_DIST = doc/perltest.txt NON-UNIX-USE HACKING PrepareRelease \
 	testdata/testinput3 testdata/testinput4 testdata/testinput5 \
 	testdata/testinput6 testdata/testinput7 testdata/testinput8 \
 	testdata/testinput9 testdata/testinput10 testdata/testinput11 \
-	testdata/testinput12 testdata/testoutput1 testdata/testoutput2 \
-	testdata/testoutput3 testdata/testoutput4 testdata/testoutput5 \
-	testdata/testoutput6 testdata/testoutput7 testdata/testoutput8 \
-	testdata/testoutput9 testdata/testoutput10 \
-	testdata/testoutput11 testdata/testoutput12 \
+	testdata/testinput12 testdata/testinput13 testdata/testoutput1 \
+	testdata/testoutput2 testdata/testoutput3 testdata/testoutput4 \
+	testdata/testoutput5 testdata/testoutput6 testdata/testoutput7 \
+	testdata/testoutput8 testdata/testoutput9 \
+	testdata/testoutput10 testdata/testoutput11 \
+	testdata/testoutput12 testdata/testoutput13 \
 	testdata/wintestinput3 testdata/wintestoutput3 perltest.pl \
 	pcredemo.c $(pcrecpp_man) cmake/COPYING-CMAKE-SCRIPTS \
 	cmake/FindPackageHandleStandardArgs.cmake \

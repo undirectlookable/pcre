@@ -200,6 +200,14 @@ them both to 0; an emulation function will be used. */
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* The value of PCREGREP_BUFSIZE determines the size of buffer used by
+   pcregrep to hold parts of the file it is searching. On systems that support
+   it, "configure" can be used to override the default, which is 8192. This is
+   also the minimum value. The actual amount of memory used by pcregrep is
+   three times this number, because it allows for the buffering of "before"
+   and "after" lines. */
+#undef PCREGREP_BUFSIZE
+
 
 /* If you are compiling for a system other than a Unix-like system or
    Win32, and it needs some magic to be inserted before the definition

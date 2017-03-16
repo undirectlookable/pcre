@@ -87,6 +87,10 @@ for (;;)
 
   $showrest = ($pattern =~ s/\+(?=[a-zA-Z]*$)//);
 
+  # A doubled version is used by pcretest to print remainders after captures
+
+  $pattern =~ s/\+(?=[a-zA-Z]*$)//;
+
   # Remove /8 from a UTF-8 pattern.
 
   $utf8 = $pattern =~ s/8(?=[a-zA-Z]*$)//;
@@ -102,6 +106,10 @@ for (;;)
   # Remove /W from a pattern (asks pcretest to set PCRE_UCP)
 
   $pattern =~ s/W(?=[a-zA-Z]*$)//;
+
+  # Remove /S or /SS from a pattern (asks pcretest to study or not to study)
+
+  $pattern =~ s/S(?=[a-zA-Z]*$)//g;
 
   # Check that the pattern is valid
 

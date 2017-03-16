@@ -1061,7 +1061,12 @@
 /abc(?C)de(?C1)f/I
     123abcdef
 
-/(?C1)\dabc(?C2)def/I
+/(?C1)\dabc(?C2)def/IS
+    1234abcdef
+    *** Failers
+    abcdef
+
+/(?C1)\dabc(?C2)def/ISS
     1234abcdef
     *** Failers
     abcdef
@@ -1310,7 +1315,12 @@
   abcde
   abcdfe
 
-/a*b/ICDZ
+/a*b/ICDZS
+  ab
+  aaaab
+  aaaacb
+
+/a*b/ICDZSS
   ab
   aaaab
   aaaacb
@@ -1320,9 +1330,16 @@
   aaaab
   aaaacb
 
-/(abc|def)x/ICDZ
+/(abc|def)x/ICDZS
   abcx
   defx
+  ** Failers 
+  abcdefzx
+
+/(abc|def)x/ICDZSS
+  abcx
+  defx
+  ** Failers 
   abcdefzx
 
 /(ab|cd){3,4}/IC
@@ -1330,7 +1347,10 @@
   abcdabcd
   abcdcdcdcdcd
 
-/([ab]{,4}c|xy)/ICDZ
+/([ab]{,4}c|xy)/ICDZS
+    Note: that { does NOT introduce a quantifier
+
+/([ab]{,4}c|xy)/ICDZSS
     Note: that { does NOT introduce a quantifier
 
 /([ab]{1,4}c|xy){4,5}?123/ICDZ
@@ -1404,13 +1424,25 @@
     1X
     123456\P
 
-/abc/I>testsavedregex
+/abc/IS>testsavedregex
 <testsavedregex
     abc
     ** Failers
     bca
 
-/abc/IF>testsavedregex
+/abc/ISS>testsavedregex
+<testsavedregex
+    abc
+    ** Failers
+    bca
+
+/abc/IFS>testsavedregex
+<testsavedregex
+    abc
+    ** Failers
+    bca
+
+/abc/IFSS>testsavedregex
 <testsavedregex
     abc
     ** Failers
@@ -1422,7 +1454,19 @@
     ** Failers
     def
 
+/(a|b)/ISS>testsavedregex
+<testsavedregex
+    abc
+    ** Failers
+    def
+
 /(a|b)/ISF>testsavedregex
+<testsavedregex
+    abc
+    ** Failers
+    def
+
+/(a|b)/ISSF>testsavedregex
 <testsavedregex
     abc
     ** Failers
@@ -1976,8 +2020,6 @@ a random value. /Ix
 
 /(?(DEFINE) abc) xyz/xI
 
-/(?(DEFINE) abc){3} xyz/x
-
 /(a|)*\d/
   \O0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   \O0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4
@@ -2295,7 +2337,7 @@ a random value. /Ix
 
 /\g6666666666/
 
-/[\g6666666666]/
+/[\g6666666666]/BZ
 
 /(?1)\c[/
 
@@ -2452,6 +2494,10 @@ a random value. /Ix
 /\k<>/
 
 /\k{}/
+
+/\k/
+
+/\kabc/
 
 /(?P=)/
 
@@ -3312,11 +3358,19 @@ name were given. ---/
 /A(*PRUNE:A)B/K
     ACAB
 
-/(*MARK:A)(*PRUNE:B)(C|X)/K
+/(*MARK:A)(*PRUNE:B)(C|X)/KS
     C
     D 
 
-/(*MARK:A)(*THEN:B)(C|X)/K
+/(*MARK:A)(*PRUNE:B)(C|X)/KSS
+    C
+    D 
+
+/(*MARK:A)(*THEN:B)(C|X)/KS
+    C
+    D 
+
+/(*MARK:A)(*THEN:B)(C|X)/KSS
     C
     D 
 
@@ -3569,5 +3623,222 @@ with \Y. ---/
 /(?P<abn>(?P=axn)xxx)/BZ
 
 /(?P<abn>(?P=axn)xxx)(?<axn>yy)/BZ
+
+/-- These tests are here because Perl gets the first one wrong. --/
+
+/(\R*)(.)/s
+    \r\n
+    \r\r\n\n\r 
+    \r\r\n\n\r\n 
+
+/(\R)*(.)/s
+    \r\n
+    \r\r\n\n\r 
+    \r\r\n\n\r\n 
+
+/((?>\r\n|\n|\x0b|\f|\r|\x85)*)(.)/s
+    \r\n
+    \r\r\n\n\r 
+    \r\r\n\n\r\n 
+
+/-- --/
+
+/^abc$/BZ
+
+/^abc$/BZm
+
+/^(a)*+(\w)/S
+    aaaaX
+    ** Failers 
+    aaaa
+
+/^(?:a)*+(\w)/S
+    aaaaX
+    ** Failers 
+    aaaa
+
+/(a)++1234/SDZ
+
+/([abc])++1234/SI
+
+/(?<=(abc)+)X/
+
+/(^ab)/I
+
+/(^ab)++/I
+
+/(^ab|^)+/I
+
+/(^ab|^)++/I
+
+/(?:^ab)/I
+
+/(?:^ab)++/I
+
+/(?:^ab|^)+/I
+
+/(?:^ab|^)++/I
+
+/(.*ab)/I
+
+/(.*ab)++/I
+
+/(.*ab|.*)+/I
+
+/(.*ab|.*)++/I
+
+/(?:.*ab)/I
+
+/(?:.*ab)++/I
+
+/(?:.*ab|.*)+/I
+
+/(?:.*ab|.*)++/I
+
+/(?=a)[bcd]/I
+
+/((?=a))[bcd]/I
+
+/((?=a))+[bcd]/I
+
+/((?=a))++[bcd]/I
+
+/(?=a+)[bcd]/iI
+
+/(?=a+?)[bcd]/iI
+
+/(?=a++)[bcd]/iI
+
+/(?=a{3})[bcd]/iI
+
+/(abc)\1+/S
+
+/-- Perl doesn't get these right IMO (the 3rd is PCRE-specific) --/
+
+/(?1)(?:(b(*ACCEPT))){0}/
+    b
+
+/(?1)(?:(b(*ACCEPT))){0}c/
+    bc
+    ** Failers 
+    b 
+
+/(?1)(?:((*ACCEPT))){0}c/
+    c
+    c\N 
+
+/^.*?(?(?=a)a|b(*THEN)c)/
+    ba
+
+/^.*?(?(?=a)a|bc)/
+    ba
+
+/-- --/
+
+/-- These studied versions are here because they are not Perl-compatible; the
+    studying means the mark is not seen. --/
+
+/(*MARK:A)(*SKIP:B)(C|X)/KS
+    C
+    D
+     
+/(*:A)A+(*SKIP:A)(B|Z)/KS
+    AAAC
+
+/-- --/
+
+"(?=a*(*ACCEPT)b)c"
+    c
+    c\N 
+    
+/(?1)c(?(DEFINE)((*ACCEPT)b))/
+    c
+    c\N  
+    
+/(?>(*ACCEPT)b)c/
+    c
+    c\N  
+
+/(?:(?>(a)))+a%/++
+    %aa%
+
+/(a)b|ac/++
+    ac\O3
+
+/(?(DEFINE)(a(?2)|b)(b(?1)|a))(?:(?1)|(?2))/SI
+
+/(a(?2)|b)(b(?1)|a)(?:(?1)|(?2))/SI
+
+/(a(?2)|b)(b(?1)|a)(?1)(?2)/SI
+
+/(abc)(?1)/SI
+
+/^(?>a)++/
+    aa\M
+    aaaaaaaaa\M 
+    
+/(a)(?1)++/
+    aa\M
+    aaaaaaaaa\M  
+
+/(?:(foo)|(bar)|(baz))X/=
+    bazfooX
+    foobazbarX
+    barfooX
+    bazX
+    foobarbazX    
+    bazfooX\O0
+    bazfooX\O2
+    bazfooX\O4
+    bazfooX\O6
+    bazfooX\O8
+    bazfooX\O10
+
+/(?=abc){3}abc/BZ
+
+/(?=abc)+abc/BZ
+
+/(?=abc)++abc/BZ
+
+/(?=abc){0}xyz/BZ
+
+/(?=(a))?./BZ
+
+/(?=(a))??./BZ
+
+/^(?=(a)){0}b(?1)/BZ
+
+/(?(DEFINE)(a))?b(?1)/BZ
+
+/^(?=(?1))?[az]([abc])d/BZ
+
+/^(?!a){0}\w+/BZ
+
+/(?<=(abc))?xyz/BZ
+
+/[:a[:abc]b:]/
+
+/((?2))((?1))/
+    abc
+
+/((?(R2)a+|(?1)b))/
+    aaaabcde
+
+/(?(R)a*(?1)|((?R))b)/
+    aaaabcde
+
+/(a+|(?R)b)/
+
+/^(a(*:A)(d|e(*:B))z|aeq)/C
+    adz
+    aez
+    aeqwerty
+
+/.(*F)/
+    \P\Pabc
+
+/\btype\b\W*?\btext\b\W*?\bjavascript\b/IS
+
+/\btype\b\W*?\btext\b\W*?\bjavascript\b|\burl\b\W*?\bshell:|<input\b.*?\btype\b\W*?\bimage\b|\bonkeyup\b\W*?\=/IS
 
 /-- End of testinput2 --/

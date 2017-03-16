@@ -36,7 +36,8 @@
 # 2009-04-11 PH applied Christian Ehrlicher's patch to show compiler flags that
 #            are set by specifying a release type.
 # 2010-01-02 PH added test for stdint.h
-# 2010-03-02 PH addes test for inttypes.h
+# 2010-03-02 PH added test for inttypes.h
+# 2011-08-01 PH added PCREGREP_BUFSIZE
 
 PROJECT(PCRE C CXX)
 
@@ -98,6 +99,9 @@ SET(PCRE_MATCH_LIMIT "10000000" CACHE STRING
 
 SET(PCRE_MATCH_LIMIT_RECURSION "MATCH_LIMIT" CACHE STRING
     "Default limit on internal recursion. See MATCH_LIMIT_RECURSION in config.h.in for details.")
+
+SET(PCREGREP_BUFSIZE "20480" CACHE STRING
+    "Buffer size parameter for pcregrep. See PCREGREP_BUFSIZE in config.h.in for details.")
 
 SET(PCRE_NEWLINE "LF" CACHE STRING
     "What to recognize as a newline (one of CR, LF, CRLF, ANY, ANYCRLF).")
@@ -556,6 +560,7 @@ IF(PCRE_SHOW_REPORT)
   MESSAGE(STATUS "  Build shared libs ............... : ${BUILD_SHARED_LIBS}")
   MESSAGE(STATUS "  Build static libs ............... : ${BUILD_STATIC_LIBS}")
   MESSAGE(STATUS "  Build pcregrep .................. : ${PCRE_BUILD_PCREGREP}")
+  MESSAGE(STATUS "  Buffer size for pcregrep ........ : ${PCREGREP_BUFSIZE}")
   MESSAGE(STATUS "  Build tests (implies pcretest) .. : ${PCRE_BUILD_TESTS}")
   IF(ZLIB_FOUND)
     MESSAGE(STATUS "  Link pcregrep with libz ......... : ${PCRE_SUPPORT_LIBZ}")

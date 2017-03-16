@@ -38,6 +38,7 @@
 #endif
 
 #include <stdio.h>
+#include <string.h>      /* for memset and strcmp */
 #include <cassert>
 #include <vector>
 #include "pcrecpp.h"
@@ -412,7 +413,7 @@ static void TestFindAndConsume() {
 }
 
 static void TestMatchNumberPeculiarity() {
-  printf("Testing match-number peculiaraity\n");
+  printf("Testing match-number peculiarity\n");
 
   string word1;
   string word2;

@@ -4079,4 +4079,173 @@
 /^\c/
     ?
 
+/(abc)\1/i
+   abc
+
+/(abc)\1/
+   abc
+
+/[^a]*/i
+    12abc
+    12ABC
+
+/[^a]*+/i
+    12abc
+    12ABC
+
+/[^a]*?X/i
+    ** Failers
+    12abc
+    12ABC
+    
+/[^a]+?X/i   
+    ** Failers
+    12abc
+    12ABC
+
+/[^a]?X/i
+    12aXbcX
+    12AXBCX
+    BCX 
+
+/[^a]??X/i
+    12aXbcX
+    12AXBCX
+    BCX
+    
+/[^a]?+X/i
+    12aXbcX
+    12AXBCX
+    BCX 
+
+/[^a]{2,3}/i
+    abcdef
+    ABCDEF  
+
+/[^a]{2,3}?/i
+    abcdef
+    ABCDEF  
+
+/[^a]{2,3}+/i
+    abcdef
+    ABCDEF  
+
+/((a|)+)+Z/
+    Z
+
+/(a)b|(a)c/
+    ac
+
+/(?>(a))b|(a)c/
+    ac
+
+/(?=(a))ab|(a)c/
+    ac
+
+/((?>(a))b|(a)c)/
+    ac
+
+/((?>(a))b|(a)c)++/
+    ac
+
+/(?:(?>(a))b|(a)c)++/
+    ac
+
+/(?=(?>(a))b|(a)c)(..)/
+    ac
+
+/(?>(?>(a))b|(a)c)/
+    ac
+
+/(?:(?>([ab])))+a=/+
+    =ba=
+
+/(?>([ab]))+a=/+
+    =ba=
+
+/((?>(a+)b)+(aabab))/
+    aaaabaaabaabab
+
+/(?>a+|ab)+?c/
+    aabc
+
+/(?>a+|ab)+c/
+    aabc
+
+/(?:a+|ab)+c/
+    aabc
+
+/(?(?=(a))a)/
+    a
+
+/(?(?=(a))a)(b)/
+    ab
+
+/^(?:a|ab)++c/
+    aaaabc
+
+/^(?>a|ab)++c/
+    aaaabc
+
+/^(?:a|ab)+c/
+    aaaabc
+
+/(?=abc){3}abc/+
+    abcabcabc
+    ** Failers
+    xyz  
+    
+/(?=abc)+abc/+
+    abcabcabc
+    ** Failers
+    xyz  
+    
+/(?=abc)++abc/+
+    abcabcabc
+    ** Failers
+    xyz  
+    
+/(?=abc){0}xyz/
+    xyz 
+
+/(?=abc){1}xyz/
+    ** Failers
+    xyz 
+    
+/(?=(a))?./
+    ab
+    bc
+      
+/(?=(a))??./
+    ab
+    bc
+
+/^(?=(a)){0}b(?1)/
+    backgammon
+
+/^(?=(?1))?[az]([abc])d/
+    abd 
+    zcdxx 
+
+/^(?!a){0}\w+/
+    aaaaa
+
+/(?<=(abc))?xyz/
+    abcxyz
+    pqrxyz 
+
+/^[\g<a>]+/
+    ggg<<<aaa>>>
+    ** Failers
+    \\ga  
+    
+/^[\ga]+/
+    gggagagaxyz 
+    
+/^[:a[:digit:]]+/
+    aaaa444:::Z 
+
+/^[:a[:digit:]:b]+/
+    aaaa444:::bbbZ 
+
 /-- End of testinput1 --/
