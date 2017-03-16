@@ -483,11 +483,12 @@ MAINTAINERCLEANFILES = pcre.h.generic
 # pcredemo_SOURCES = pcredemo.c
 # pcredemo_LDADD = libpcre.la
 EXTRA_DIST = doc/perltest.txt NON-UNIX-USE HACKING PrepareRelease \
-	CleanTxt Detrail 132html doc/index.html.src makevp.bat \
-	makevp_c.txt makevp_l.txt pcregexp.pas pcre.h.generic \
-	config.h.generic pcre_printint.src pcre_chartables.c.dist \
-	sljit/sljitConfig.h sljit/sljitConfigInternal.h \
-	sljit/sljitExecAllocator.c sljit/sljitLir.c sljit/sljitLir.h \
+	CheckMan CleanTxt Detrail 132html doc/index.html.src \
+	makevp.bat makevp_c.txt makevp_l.txt pcregexp.pas \
+	pcre.h.generic config.h.generic pcre_printint.src \
+	pcre_chartables.c.dist sljit/sljitConfig.h \
+	sljit/sljitConfigInternal.h sljit/sljitExecAllocator.c \
+	sljit/sljitLir.c sljit/sljitLir.h \
 	sljit/sljitNativeARM_Thumb2.c sljit/sljitNativeARM_v5.c \
 	sljit/sljitNativeMIPS_32.c sljit/sljitNativeMIPS_common.c \
 	sljit/sljitNativePPC_32.c sljit/sljitNativePPC_64.c \

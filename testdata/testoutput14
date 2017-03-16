@@ -42,8 +42,10 @@ Capturing subpattern count = 0
 No options
 No first char
 No need char
-Subject length lower bound = -1
-No set of starting bytes
-JIT study was successful
+Study returned NULL
+
+/(?(R)a*(?1)|((?R))b)/S+
+    aaaabcde
+Error -27 (JIT stack limit reached)
 
 /-- End of testinput14 --/

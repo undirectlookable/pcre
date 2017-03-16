@@ -4251,4 +4251,71 @@
 /[:a]xxx[b:]/
      :xxx:
      
+/(?<=a{2})b/i
+    xaabc
+    ** Failers
+    xabc  
+
+/(?<!a{2})b/i
+    xabc
+    ** Failers
+    xaabc  
+
+/(?<=a\h)c/
+    xa c
+    
+/(?<=[^a]{2})b/
+    axxbc
+    aAAbc 
+    ** Failers
+    xaabc    
+
+/(?<=[^a]{2})b/i
+    axxbc  
+    ** Failers
+    aAAbc 
+    xaabc    
+
+/(?<=a\H)c/
+    abc
+
+/(?<=a\V)c/
+    abc
+    
+/(?<=a\v)c/
+    a\nc
+
+/(?(?=c)c|d)++Y/
+    XcccddYX
+
+/(?(?=c)c|d)*+Y/
+    XcccddYX
+
+/^(a{2,3}){2,}+a/
+    aaaaaaa
+    ** Failers
+    aaaaaa
+    aaaaaaaaa 
+
+/^(a{2,3})++a/
+    ** Failers
+    aaaaaa
+
+/^(a{2,3})*+a/
+    ** Failers
+    aaaaaa
+
+/ab\Cde/
+    abXde
+    
+/(?<=ab\Cde)X/
+    abZdeX
+
+/a[\CD]b/
+    aCb
+    aDb 
+
+/a[\C-X]b/
+    aJb
+
 /-- End of testinput1 --/
