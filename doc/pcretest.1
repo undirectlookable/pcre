@@ -179,6 +179,7 @@ options that do not correspond to anything in Perl:
   \fB/U\fP              PCRE_UNGREEDY
   \fB/W\fP              PCRE_UCP
   \fB/X\fP              PCRE_EXTRA
+  \fB/Y\fP              PCRE_NO_START_OPTIMIZE
   \fB/<JS>\fP           PCRE_JAVASCRIPT_COMPAT
   \fB/<cr>\fP           PCRE_NEWLINE_CR
   \fB/<lf>\fP           PCRE_NEWLINE_LF
@@ -219,9 +220,12 @@ begins with a lookbehind assertion (including \eb or \eB).
 If any call to \fBpcre_exec()\fP in a \fB/g\fP or \fB/G\fP sequence matches an
 empty string, the next call is done with the PCRE_NOTEMPTY_ATSTART and
 PCRE_ANCHORED flags set in order to search for another, non-empty, match at the
-same point. If this second match fails, the start offset is advanced by one
-character, and the normal match is retried. This imitates the way Perl handles
-such cases when using the \fB/g\fP modifier or the \fBsplit()\fP function.
+same point. If this second match fails, the start offset is advanced, and the
+normal match is retried. This imitates the way Perl handles such cases when
+using the \fB/g\fP modifier or the \fBsplit()\fP function. Normally, the start
+offset is advanced by one character, but if the newline convention recognizes
+CRLF as a newline, and the current character is CR followed by LF, an advance
+of two is used.
 .
 .
 .SS "Other modifiers"
@@ -341,7 +345,8 @@ recognized:
   \et         tab (\ex09)
   \ev         vertical tab (\ex0b)
   \ennn       octal character (up to 3 octal digits)
-  \exhh       hexadecimal character (up to 2 hex digits)
+               always a byte unless > 255 in UTF-8 mode
+  \exhh       hexadecimal byte (up to 2 hex digits)
 .\" JOIN
   \ex{hh...}  hexadecimal character, any number of digits
                in UTF-8 mode
@@ -411,10 +416,10 @@ recognized:
 .\" JOIN
   \e?         pass the PCRE_NO_UTF8_CHECK option to
                \fBpcre_exec()\fP or \fBpcre_dfa_exec()\fP
-  \e>dd       start the match at offset dd (any number of digits);
 .\" JOIN
-               this sets the \fIstartoffset\fP argument for \fBpcre_exec()\fP
-               or \fBpcre_dfa_exec()\fP
+  \e>dd       start the match at offset dd (optional "-"; then
+               any number of digits); this sets the \fIstartoffset\fP
+               argument for \fBpcre_exec()\fP or \fBpcre_dfa_exec()\fP
 .\" JOIN
   \e<cr>      pass the PCRE_NEWLINE_CR option to \fBpcre_exec()\fP
                or \fBpcre_dfa_exec()\fP
@@ -431,6 +436,13 @@ recognized:
   \e<any>     pass the PCRE_NEWLINE_ANY option to \fBpcre_exec()\fP
                or \fBpcre_dfa_exec()\fP
 .sp
+Note that \exhh always specifies one byte, even in UTF-8 mode; this makes it
+possible to construct invalid UTF-8 sequences for testing purposes. On the
+other hand, \ex{hh} is interpreted as a UTF-8 character in UTF-8 mode,
+generating more than one byte if the value is greater than 127. When not in
+UTF-8 mode, it generates one byte for values less than 256, and causes an error
+for greater values.
+.P
 The escapes that specify line ending sequences are literal strings, exactly as
 shown. No more than one newline setting should be present in any data line.
 .P
@@ -499,9 +511,11 @@ When a match succeeds, pcretest outputs the list of captured substrings that
 \fBpcre_exec()\fP returns, starting with number 0 for the string that matched
 the whole pattern. Otherwise, it outputs "No match" when the return is
 PCRE_ERROR_NOMATCH, and "Partial match:" followed by the partially matching
-substring when \fBpcre_exec()\fP returns PCRE_ERROR_PARTIAL. For any other
-returns, it outputs the PCRE negative error number. Here is an example of an
-interactive \fBpcretest\fP run.
+substring when \fBpcre_exec()\fP returns PCRE_ERROR_PARTIAL. (Note that this is
+the entire substring that was inspected during the partial match; it may
+include characters before the actual match start if a lookbehind assertion,
+\eK, \eb, or \eB was involved.) For any other returns, it outputs the PCRE
+negative error number. Here is an example of an interactive \fBpcretest\fP run.
 .sp
   $ pcretest
   PCRE version 7.0 30-Nov-2006
@@ -584,7 +598,9 @@ the subject where there is at least one match. For example:
 (Using the normal matching function on this data finds only "tang".) The
 longest matching string is always given first (and numbered zero). After a
 PCRE_ERROR_PARTIAL return, the output is "Partial match:", followed by the
-partially matching substring.
+partially matching substring. (Note that this is the entire substring that was
+inspected during the partial match; it may include characters before the actual
+match start if a lookbehind assertion, \eK, \eb, or \eB was involved.)
 .P
 If \fB/g\fP is present on the pattern, the search for further matches resumes
 at the end of the longest match. For example:
@@ -763,6 +779,6 @@ Cambridge CB2 3QH, England.
 .rs
 .sp
 .nf
-Last updated: 14 June 2010
+Last updated: 21 November 2010
 Copyright (c) 1997-2010 University of Cambridge.
 .fi

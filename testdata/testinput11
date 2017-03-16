@@ -1,4 +1,4 @@
-/-- These tests are for the Perl 5.10 features that PCRE supports. --/
+/-- These tests are for the Perl >= 5.10 features that PCRE supports. --/
 
 /\H\h\V\v/
     X X\x0a
@@ -482,5 +482,29 @@ however, we need the complication for Perl. ---/
 
 /(?&t)(?#()(?(DEFINE)(?<t>a))/
     bac
+
+/--- COMMIT should override THEN ---/
+
+/(?>(*COMMIT)(?>yes|no)(*THEN)(*F))?/
+  yes
+
+/(?>(*COMMIT)(yes|no)(*THEN)(*F))?/
+  yes
+
+/^((yes|no)(*THEN)(*F))?/
+  yes
+
+/b?(*SKIP)c/
+    bc
+    abc
+   
+/(*SKIP)bc/
+    a
+
+/(*SKIP)b/
+    a 
+
+/(?P<abn>(?P=abn)xxx|)+/
+    xxx
 
 /-- End of testinput11 --/
