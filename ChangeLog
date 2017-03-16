@@ -1,6 +1,66 @@
 ChangeLog for PCRE
 ------------------
 
+Version 8.30 04-February-2012
+-----------------------------
+
+1.  Renamed "isnumber" as "is_a_number" because in some Mac environments this
+    name is defined in ctype.h.
+
+2.  Fixed a bug in fixed-length calculation for lookbehinds that would show up
+    only in quite long subpatterns.
+
+3.  Removed the function pcre_info(), which has been obsolete and deprecated
+    since it was replaced by pcre_fullinfo() in February 2000.
+
+4.  For a non-anchored pattern, if (*SKIP) was given with a name that did not
+    match a (*MARK), and the match failed at the start of the subject, a
+    reference to memory before the start of the subject could occur. This bug
+    was introduced by fix 17 of release 8.21.
+
+5.  A reference to an unset group with zero minimum repetition was giving
+    totally wrong answers (in non-JavaScript-compatibility mode). For example,
+    /(another)?(\1?)test/ matched against "hello world test". This bug was
+    introduced in release 8.13.
+
+6.  Add support for 16-bit character strings (a large amount of work involving
+    many changes and refactorings).
+
+7.  RunGrepTest failed on msys because \r\n was replaced by whitespace when the
+    command "pattern=`printf 'xxx\r\njkl'`" was run. The pattern is now taken
+    from a file.
+
+8.  Ovector size of 2 is also supported by JIT based pcre_exec (the ovector size
+    rounding is not applied in this particular case).
+
+9.  The invalid Unicode surrogate codepoints U+D800 to U+DFFF are now rejected
+    if they appear, or are escaped, in patterns.
+
+10. Get rid of a number of -Wunused-but-set-variable warnings.
+
+11. The pattern /(?=(*:x))(q|)/ matches an empty string, and returns the mark
+    "x". The similar pattern /(?=(*:x))((*:y)q|)/ did not return a mark at all.
+    Oddly, Perl behaves the same way. PCRE has been fixed so that this pattern
+    also returns the mark "x". This bug applied to capturing parentheses,
+    non-capturing parentheses, and atomic parentheses. It also applied to some
+    assertions.
+
+12. Stephen Kelly's patch to CMakeLists.txt allows it to parse the version
+    information out of configure.ac instead of relying on pcre.h.generic, which
+    is not stored in the repository.
+
+13. Applied Dmitry V. Levin's patch for a more portable method for linking with
+    -lreadline.
+
+14. ZH added PCRE_CONFIG_JITTARGET; added its output to pcretest -C.
+
+15. Applied Graycode's patch to put the top-level frame on the stack rather
+    than the heap when not using the stack for recursion. This gives a
+    performance improvement in many cases when recursion is not deep.
+
+16. Experimental code added to "pcretest -C" to output the stack frame size.
+
+
 Version 8.21 12-Dec-2011
 ------------------------
 
