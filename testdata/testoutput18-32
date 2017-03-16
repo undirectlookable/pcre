@@ -606,8 +606,6 @@ Need char = 'X'
 Failed: missing terminating ] for character class at offset 13
 
 /X/8
-    \x{0}\x{d7ff}\x{e000}\x{10ffff}
-Error -10 (bad UTF-32 string) offset=3 reason=2
     \x{d800}
 Error -10 (bad UTF-32 string) offset=0 reason=1
     \x{d800}\?
@@ -632,11 +630,9 @@ No match
 Error -10 (bad UTF-32 string) offset=0 reason=3
     \x{d800}\x{1234}
 Error -10 (bad UTF-32 string) offset=0 reason=1
-    \x{fffe}
-Error -10 (bad UTF-32 string) offset=0 reason=2
 
 /(*UTF16)\x{11234}/
-Failed: (*VERB) not recognized at offset 5
+Failed: (*VERB) not recognized or malformed at offset 5
 
 /(*UTF)\x{11234}/I
 Capturing subpattern count = 0
@@ -647,10 +643,10 @@ No need char
  0: \x{11234}
 
 /(*UTF-32)\x{11234}/
-Failed: (*VERB) not recognized at offset 5
+Failed: (*VERB) not recognized or malformed at offset 5
 
 /(*CRLF)(*UTF16)(*BSR_UNICODE)a\Rb/I
-Failed: (*VERB) not recognized at offset 12
+Failed: (*VERB) not recognized or malformed at offset 12
 
 /(*CRLF)(*UTF32)(*BSR_UNICODE)a\Rb/I
 Capturing subpattern count = 0
@@ -1015,5 +1011,11 @@ Error -24 (bad offset value)
 ------------------------------------------------------------------
     \x{a0}\x20!
  0: \x{a0} !
+
+/(*UTF)abc/9
+Failed: setting UTF is disabled by the application at offset 0
+
+/abc/89
+Failed: setting UTF is disabled by the application at offset 0
 
 /-- End of testinput18 --/

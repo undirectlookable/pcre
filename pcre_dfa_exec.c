@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language (but see
 below for why this module is different).
 
                        Written by Philip Hazel
-           Copyright (c) 1997-2012 University of Cambridge
+           Copyright (c) 1997-2013 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -636,7 +636,7 @@ for (;;)
     const pcre_uchar *code;
     int state_offset = current_state->offset;
     int codevalue, rrc;
-    unsigned int count;
+    int count;
 
 #ifdef PCRE_DEBUG
     printf ("%.*sProcessing state %d c=", rlevel*2-2, SP, state_offset);
@@ -1120,6 +1120,12 @@ for (;;)
             }
           break;
 
+          case PT_UCNC:
+          OK = c == CHAR_DOLLAR_SIGN || c == CHAR_COMMERCIAL_AT ||
+               c == CHAR_GRAVE_ACCENT || (c >= 0xa0 && c <= 0xd7ff) ||
+               c >= 0xe000;
+          break;
+
           /* Should never occur, but keep compilers from grumbling. */
 
           default:
@@ -1249,7 +1255,7 @@ for (;;)
               (d != OP_ANY || !IS_NEWLINE(ptr)) &&
               ((ctypes[c] & toptable1[d]) ^ toptable2[d]) != 0))
           {
-          if (++count >= GET2(code, 1))
+          if (++count >= (int)GET2(code, 1))
             { ADD_NEW(state_offset + 1 + IMM2_SIZE + 1, 0); }
           else
             { ADD_NEW(state_offset, count); }
@@ -1283,7 +1289,7 @@ for (;;)
             active_count--;           /* Remove non-match possibility */
             next_active_state--;
             }
-          if (++count >= GET2(code, 1))
+          if (++count >= (int)GET2(code, 1))
             { ADD_NEW(state_offset + 2 + IMM2_SIZE, 0); }
           else
             { ADD_NEW(state_offset, count); }
@@ -1362,6 +1368,12 @@ for (;;)
             if (c < *cp) { OK = FALSE; break; }
             if (c == *cp++) { OK = TRUE; break; }
             }
+          break;
+
+          case PT_UCNC:
+          OK = c == CHAR_DOLLAR_SIGN || c == CHAR_COMMERCIAL_AT ||
+               c == CHAR_GRAVE_ACCENT || (c >= 0xa0 && c <= 0xd7ff) ||
+               c >= 0xe000;
           break;
 
           /* Should never occur, but keep compilers from grumbling. */
@@ -1602,6 +1614,12 @@ for (;;)
             }
           break;
 
+          case PT_UCNC:
+          OK = c == CHAR_DOLLAR_SIGN || c == CHAR_COMMERCIAL_AT ||
+               c == CHAR_GRAVE_ACCENT || (c >= 0xa0 && c <= 0xd7ff) ||
+               c >= 0xe000;
+          break;
+
           /* Should never occur, but keep compilers from grumbling. */
 
           default:
@@ -1705,7 +1723,7 @@ for (;;)
             active_count--;           /* Remove non-match possibility */
             next_active_state--;
             }
-          ADD_NEW_DATA(-(state_offset + count), 0, ncount);
+          ADD_NEW_DATA(-(state_offset + (int)count), 0, ncount);
           break;
 
           default:
@@ -1749,7 +1767,7 @@ for (;;)
             active_count--;           /* Remove non-match possibility */
             next_active_state--;
             }
-          ADD_NEW_DATA(-(state_offset + count), 0, 0);
+          ADD_NEW_DATA(-(state_offset + (int)count), 0, 0);
           }
         }
       break;
@@ -1790,7 +1808,7 @@ for (;;)
             active_count--;           /* Remove non-match possibility */
             next_active_state--;
             }
-          ADD_NEW_DATA(-(state_offset + count), 0, 0);
+          ADD_NEW_DATA(-(state_offset + (int)count), 0, 0);
           }
         }
       break;
@@ -1865,6 +1883,12 @@ for (;;)
             }
           break;
 
+          case PT_UCNC:
+          OK = c == CHAR_DOLLAR_SIGN || c == CHAR_COMMERCIAL_AT ||
+               c == CHAR_GRAVE_ACCENT || (c >= 0xa0 && c <= 0xd7ff) ||
+               c >= 0xe000;
+          break;
+
           /* Should never occur, but keep compilers from grumbling. */
 
           default:
@@ -1879,7 +1903,7 @@ for (;;)
             active_count--;           /* Remove non-match possibility */
             next_active_state--;
             }
-          if (++count >= GET2(code, 1))
+          if (++count >= (int)GET2(code, 1))
             { ADD_NEW(state_offset + 1 + IMM2_SIZE + 3, 0); }
           else
             { ADD_NEW(state_offset, count); }
@@ -1918,7 +1942,7 @@ for (;;)
           }
         if (nptr >= end_subject && (md->moptions & PCRE_PARTIAL_HARD) != 0)
             reset_could_continue = TRUE;
-        if (++count >= GET2(code, 1))
+        if (++count >= (int)GET2(code, 1))
           { ADD_NEW_DATA(-(state_offset + 2 + IMM2_SIZE), 0, ncount); }
         else
           { ADD_NEW_DATA(-state_offset, count, ncount); }
@@ -1960,7 +1984,7 @@ for (;;)
             active_count--;           /* Remove non-match possibility */
             next_active_state--;
             }
-          if (++count >= GET2(code, 1))
+          if (++count >= (int)GET2(code, 1))
             { ADD_NEW_DATA(-(state_offset + 2 + IMM2_SIZE), 0, ncount); }
           else
             { ADD_NEW_DATA(-state_offset, count, ncount); }
@@ -2000,7 +2024,7 @@ for (;;)
             active_count--;           /* Remove non-match possibility */
             next_active_state--;
             }
-          if (++count >= GET2(code, 1))
+          if (++count >= (int)GET2(code, 1))
             { ADD_NEW_DATA(-(state_offset + 2 + IMM2_SIZE), 0, 0); }
           else
             { ADD_NEW_DATA(-state_offset, count, 0); }
@@ -2037,7 +2061,7 @@ for (;;)
             active_count--;           /* Remove non-match possibility */
             next_active_state--;
             }
-          if (++count >= GET2(code, 1))
+          if (++count >= (int)GET2(code, 1))
             { ADD_NEW_DATA(-(state_offset + 2 + IMM2_SIZE), 0, 0); }
           else
             { ADD_NEW_DATA(-state_offset, count, 0); }
@@ -2407,7 +2431,7 @@ for (;;)
           }
         if ((c == d || c == otherd) == (codevalue < OP_NOTSTAR))
           {
-          if (++count >= GET2(code, 1))
+          if (++count >= (int)GET2(code, 1))
             { ADD_NEW(state_offset + dlen + 1 + IMM2_SIZE, 0); }
           else
             { ADD_NEW(state_offset, count); }
@@ -2456,7 +2480,7 @@ for (;;)
             active_count--;             /* Remove non-match possibility */
             next_active_state--;
             }
-          if (++count >= GET2(code, 1))
+          if (++count >= (int)GET2(code, 1))
             { ADD_NEW(state_offset + dlen + 1 + IMM2_SIZE, 0); }
           else
             { ADD_NEW(state_offset, count); }
@@ -2529,11 +2553,11 @@ for (;;)
           case OP_CRRANGE:
           case OP_CRMINRANGE:
           count = current_state->count;  /* Already matched */
-          if (count >= GET2(ecode, 1))
+          if (count >= (int)GET2(ecode, 1))
             { ADD_ACTIVE(next_state_offset + 1 + 2 * IMM2_SIZE, 0); }
           if (isinclass)
             {
-            unsigned int max = GET2(ecode, 1 + IMM2_SIZE);
+            int max = (int)GET2(ecode, 1 + IMM2_SIZE);
             if (++count >= max && max != 0)   /* Max 0 => no limit */
               { ADD_NEW(next_state_offset + 1 + 2 * IMM2_SIZE, 0); }
             else
@@ -3023,15 +3047,7 @@ for (;;)
           ptr > md->start_used_ptr)            /* Inspected non-empty string */
           )
         )
-      {
-      if (offsetcount >= 2)
-        {
-        offsets[0] = (int)(md->start_used_ptr - start_subject);
-        offsets[1] = (int)(end_subject - start_subject);
-        }
       match_count = PCRE_ERROR_PARTIAL;
-      }
-
     DPRINTF(("%.*sEnd of internal_dfa_exec %d: returning %d\n"
       "%.*s---------------------\n\n", rlevel*2-2, SP, rlevel, match_count,
       rlevel*2-2, SP));
@@ -3545,7 +3561,17 @@ for (;;)
   /* Anything other than "no match" means we are done, always; otherwise, carry
   on only if not anchored. */
 
-  if (rc != PCRE_ERROR_NOMATCH || anchored) return rc;
+  if (rc != PCRE_ERROR_NOMATCH || anchored)
+    {
+    if (rc == PCRE_ERROR_PARTIAL && offsetcount >= 2)
+      {
+      offsets[0] = (int)(md->start_used_ptr - (PCRE_PUCHAR)subject);
+      offsets[1] = (int)(end_subject - (PCRE_PUCHAR)subject);
+      if (offsetcount > 2)
+        offsets[2] = (int)(current_subject - (PCRE_PUCHAR)subject);
+      }
+    return rc;
+    }
 
   /* Advance to the next subject character unless we are at the end of a line
   and firstline is set. */

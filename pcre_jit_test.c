@@ -126,6 +126,7 @@ int main(void)
 #define F_DIFF		0x080000
 #define F_FORCECONV	0x100000
 #define F_PROPERTY	0x200000
+#define F_STUDY		0x400000
 
 struct regression_test_case {
 	int flags;
@@ -306,6 +307,17 @@ static struct regression_test_case regression_test_cases[] = {
 	{ CMUA, 0, "[^\xe1\xbd\xb8][^\xc3\xa9]", "\xe1\xbd\xb8\xe1\xbf\xb8\xc3\xa9\xc3\x89#" },
 	{ MUA, 0, "[^\xe1\xbd\xb8][^\xc3\xa9]", "\xe1\xbd\xb8\xe1\xbf\xb8\xc3\xa9\xc3\x89#" },
 	{ MUA, 0, "[^\xe1\xbd\xb8]{3,}?", "##\xe1\xbd\xb8#\xe1\xbd\xb8#\xc3\x89#\xe1\xbd\xb8" },
+
+	/* Bracket repeats with limit. */
+	{ MUA, 0, "(?:(ab){2}){5}M", "abababababababababababM" },
+	{ MUA, 0, "(?:ab|abab){1,5}M", "abababababababababababM" },
+	{ MUA, 0, "(?>ab|abab){1,5}M", "abababababababababababM" },
+	{ MUA, 0, "(?:ab|abab){1,5}?M", "abababababababababababM" },
+	{ MUA, 0, "(?>ab|abab){1,5}?M", "abababababababababababM" },
+	{ MUA, 0, "(?:(ab){1,4}?){1,3}?M", "abababababababababababababM" },
+	{ MUA, 0, "(?:(ab){1,4}){1,3}abababababababababababM", "ababababababababababababM" },
+	{ MUA, 0 | F_NOMATCH, "(?:(ab){1,4}){1,3}abababababababababababM", "abababababababababababM" },
+	{ MUA, 0, "(ab){4,6}?M", "abababababababM" },
 
 	/* Basic character sets. */
 	{ MUA, 0, "(?:\\s)+(?:\\S)+", "ab \t\xc3\xa9\xe6\x92\xad " },
@@ -572,6 +584,7 @@ static struct regression_test_case regression_test_cases[] = {
 	{ MUA, 0, "(?P<Name>a)?(?P<Name2>b)?(?(Name)c|d)*l", "bc ddd abccabccl" },
 	{ MUA, 0, "(?P<Name>a)?(?P<Name2>b)?(?(Name)c|d)+?dd", "bcabcacdb bdddd" },
 	{ MUA, 0, "(?P<Name>a)?(?P<Name2>b)?(?(Name)c|d)+l", "ababccddabdbccd abcccl" },
+	{ MUA, 0, "((?:a|aa)(?(1)aaa))x", "aax" },
 
 	/* Set start of match. */
 	{ MUA, 0, "(?:\\Ka)*aaaab", "aaaaaaaa aaaaaaabb" },
@@ -627,6 +640,10 @@ static struct regression_test_case regression_test_cases[] = {
 	{ MUA, 0, "(?(R0)aa|bb(?R))", "abba aabb bbaa" },
 	{ MUA, 0, "((?(R)(?:aaaa|a)|(?:(aaaa)|(a)))+)(?1)$", "aaaaaaaaaa aaaa" },
 	{ MUA, 0, "(?P<Name>a(?(R&Name)a|b))(?1)", "aab abb abaa" },
+	{ MUA, 0, "((?(R)a|(?1)){3})", "XaaaaaaaaaX" },
+	{ MUA, 0, "((?:(?(R)a|(?1))){3})", "XaaaaaaaaaX" },
+	{ MUA, 0, "((?(R)a|(?1)){1,3})aaaaaa", "aaaaaaaaXaaaaaaaaa" },
+	{ MUA, 0, "((?(R)a|(?1)){1,3}?)M", "aaaM" },
 
 	/* 16 bit specific tests. */
 	{ CMA, 0 | F_FORCECONV, "\xc3\xa1", "\xc3\x81\xc3\xa1" },
@@ -682,17 +699,65 @@ static struct regression_test_case regression_test_cases[] = {
 	{ MUA, 0, "(?(DEFINE)(a(*:aa)))a(?1)b|aac", "aac" },
 	{ MUA, 0, "(a(*:aa)){0}(?:b(?1)b|c)+c", "babbab cc" },
 	{ MUA, 0, "(a(*:aa)){0}(?:b(?1)b)+", "babba" },
-	{ MUA, 0 | F_NOMATCH, "(a(*:aa)){0}(?:b(?1)b)+", "ba" },
+	{ MUA, 0 | F_NOMATCH | F_STUDY, "(a(*:aa)){0}(?:b(?1)b)+", "ba" },
 	{ MUA, 0, "(a\\K(*:aa)){0}(?:b(?1)b|c)+c", "babbab cc" },
 	{ MUA, 0, "(a\\K(*:aa)){0}(?:b(?1)b)+", "babba" },
-	{ MUA, 0 | F_NOMATCH, "(a\\K(*:aa)){0}(?:b(?1)b)+", "ba" },
+	{ MUA, 0 | F_NOMATCH | F_STUDY, "(a\\K(*:aa)){0}(?:b(?1)b)+", "ba" },
+	{ MUA, 0 | F_NOMATCH | F_STUDY, "(*:mark)m", "a" },
 
 	/* (*COMMIT) verb. */
 	{ MUA, 0 | F_NOMATCH, "a(*COMMIT)b", "ac" },
 	{ MUA, 0, "aa(*COMMIT)b", "xaxaab" },
 	{ MUA, 0 | F_NOMATCH, "a(*COMMIT)(*:msg)b|ac", "ac" },
-	{ MUA, 0, "(?=a(*COMMIT)b|ac)ac|(*:m)(a)c", "ac" },
-	{ MUA, 0, "(?!a(*COMMIT)(*:msg)b)a(c)|cd", "acd" },
+	{ MUA, 0 | F_NOMATCH, "(a(*COMMIT)b)++", "abac" },
+	{ MUA, 0 | F_NOMATCH, "((a)(*COMMIT)b)++", "abac" },
+	{ MUA, 0 | F_NOMATCH, "(?=a(*COMMIT)b)ab|ad", "ad" },
+
+	/* (*PRUNE) verb. */
+	{ MUA, 0, "aa\\K(*PRUNE)b", "aaab" },
+	{ MUA, 0, "aa(*PRUNE:bb)b|a", "aa" },
+	{ MUA, 0, "(a)(a)(*PRUNE)b|(a)", "aa" },
+	{ MUA, 0, "(a)(a)(a)(a)(a)(a)(a)(a)(*PRUNE)b|(a)", "aaaaaaaa" },
+	{ MUA | PCRE_PARTIAL_SOFT, 0, "a(*PRUNE)a|", "a" },
+	{ MUA | PCRE_PARTIAL_SOFT, 0, "a(*PRUNE)a|m", "a" },
+	{ MUA, 0 | F_NOMATCH, "(?=a(*PRUNE)b)ab|ad", "ad" },
+	{ MUA, 0, "a(*COMMIT)(*PRUNE)d|bc", "abc" },
+	{ MUA, 0, "(?=a(*COMMIT)b)a(*PRUNE)c|bc", "abc" },
+	{ MUA, 0 | F_NOMATCH, "(*COMMIT)(?=a(*COMMIT)b)a(*PRUNE)c|bc", "abc" },
+	{ MUA, 0, "(?=(a)(*COMMIT)b)a(*PRUNE)c|bc", "abc" },
+	{ MUA, 0 | F_NOMATCH, "(*COMMIT)(?=(a)(*COMMIT)b)a(*PRUNE)c|bc", "abc" },
+	{ MUA, 0, "(a(*COMMIT)b){0}a(?1)(*PRUNE)c|bc", "abc" },
+	{ MUA, 0 | F_NOMATCH, "(a(*COMMIT)b){0}a(*COMMIT)(?1)(*PRUNE)c|bc", "abc" },
+	{ MUA, 0, "(a(*COMMIT)b)++(*PRUNE)d|c", "ababc" },
+	{ MUA, 0 | F_NOMATCH, "(*COMMIT)(a(*COMMIT)b)++(*PRUNE)d|c", "ababc" },
+	{ MUA, 0, "((a)(*COMMIT)b)++(*PRUNE)d|c", "ababc" },
+	{ MUA, 0 | F_NOMATCH, "(*COMMIT)((a)(*COMMIT)b)++(*PRUNE)d|c", "ababc" },
+	{ MUA, 0, "(?>a(*COMMIT)b)*abab(*PRUNE)d|ba", "ababab" },
+	{ MUA, 0 | F_NOMATCH, "(*COMMIT)(?>a(*COMMIT)b)*abab(*PRUNE)d|ba", "ababab" },
+	{ MUA, 0, "(?>a(*COMMIT)b)+abab(*PRUNE)d|ba", "ababab" },
+	{ MUA, 0 | F_NOMATCH, "(*COMMIT)(?>a(*COMMIT)b)+abab(*PRUNE)d|ba", "ababab" },
+	{ MUA, 0, "(?>a(*COMMIT)b)?ab(*PRUNE)d|ba", "aba" },
+	{ MUA, 0 | F_NOMATCH, "(*COMMIT)(?>a(*COMMIT)b)?ab(*PRUNE)d|ba", "aba" },
+	{ MUA, 0, "(?>a(*COMMIT)b)*?n(*PRUNE)d|ba", "abababn" },
+	{ MUA, 0 | F_NOMATCH, "(*COMMIT)(?>a(*COMMIT)b)*?n(*PRUNE)d|ba", "abababn" },
+	{ MUA, 0, "(?>a(*COMMIT)b)+?n(*PRUNE)d|ba", "abababn" },
+	{ MUA, 0 | F_NOMATCH, "(*COMMIT)(?>a(*COMMIT)b)+?n(*PRUNE)d|ba", "abababn" },
+	{ MUA, 0, "(?>a(*COMMIT)b)??n(*PRUNE)d|bn", "abn" },
+	{ MUA, 0 | F_NOMATCH, "(*COMMIT)(?>a(*COMMIT)b)??n(*PRUNE)d|bn", "abn" },
+
+	/* (*SKIP) verb. */
+	{ MUA, 0 | F_NOMATCH, "(?=a(*SKIP)b)ab|ad", "ad" },
+
+	/* (*THEN) verb. */
+	{ MUA, 0, "((?:a(*THEN)|aab)(*THEN)c|a+)+m", "aabcaabcaabcaabcnacm" },
+	{ MUA, 0 | F_NOMATCH, "((?:a(*THEN)|aab)(*THEN)c|a+)+m", "aabcm" },
+	{ MUA, 0, "((?:a(*THEN)|aab)c|a+)+m", "aabcaabcnmaabcaabcm" },
+	{ MUA, 0, "((?:a|aab)(*THEN)c|a+)+m", "aam" },
+	{ MUA, 0, "((?:a(*COMMIT)|aab)(*THEN)c|a+)+m", "aam" },
+	{ MUA, 0, "(?(?=a(*THEN)b)ab|ad)", "ad" },
+	{ MUA, 0, "(?(?!a(*THEN)b)ad|add)", "add" },
+	{ MUA, 0 | F_NOMATCH, "(?(?=a)a(*THEN)b|ad)", "ad" },
+	{ MUA, 0, "(?!(?(?=a)ab|b(*THEN)d))bn|bnn", "bnn" },
 
 	/* Deep recursion. */
 	{ MUA, 0, "((((?:(?:(?:\\w)+)?)*|(?>\\w)+?)+|(?>\\w)?\?)*)?\\s", "aaaaa+ " },
@@ -1230,6 +1295,10 @@ static int regression_tests(void)
 					current->flags & (PCRE_NOTBOL | PCRE_NOTEOL | PCRE_NOTEMPTY | PCRE_NOTEMPTY_ATSTART | PCRE_PARTIAL_SOFT | PCRE_PARTIAL_HARD), ovector8_1, 32, getstack8());
 			memset(&dummy_extra8, 0, sizeof(pcre_extra));
 			dummy_extra8.flags = PCRE_EXTRA_MARK;
+			if (current->start_offset & F_STUDY) {
+				dummy_extra8.flags |= PCRE_EXTRA_STUDY_DATA;
+				dummy_extra8.study_data = extra8->study_data;
+			}
 			dummy_extra8.mark = &mark8_2;
 			return_value8[1] = pcre_exec(re8, &dummy_extra8, current->input, strlen(current->input), current->start_offset & OFFSET_MASK,
 				current->flags & (PCRE_NOTBOL | PCRE_NOTEOL | PCRE_NOTEMPTY | PCRE_NOTEMPTY_ATSTART | PCRE_PARTIAL_SOFT | PCRE_PARTIAL_HARD), ovector8_2, 32);
@@ -1260,6 +1329,10 @@ static int regression_tests(void)
 					current->flags & (PCRE_NOTBOL | PCRE_NOTEOL | PCRE_NOTEMPTY | PCRE_NOTEMPTY_ATSTART | PCRE_PARTIAL_SOFT | PCRE_PARTIAL_HARD), ovector16_1, 32, getstack16());
 			memset(&dummy_extra16, 0, sizeof(pcre16_extra));
 			dummy_extra16.flags = PCRE_EXTRA_MARK;
+			if (current->start_offset & F_STUDY) {
+				dummy_extra16.flags |= PCRE_EXTRA_STUDY_DATA;
+				dummy_extra16.study_data = extra16->study_data;
+			}
 			dummy_extra16.mark = &mark16_2;
 			return_value16[1] = pcre16_exec(re16, &dummy_extra16, regtest_buf16, length16, current->start_offset & OFFSET_MASK,
 				current->flags & (PCRE_NOTBOL | PCRE_NOTEOL | PCRE_NOTEMPTY | PCRE_NOTEMPTY_ATSTART | PCRE_PARTIAL_SOFT | PCRE_PARTIAL_HARD), ovector16_2, 32);
@@ -1290,6 +1363,10 @@ static int regression_tests(void)
 					current->flags & (PCRE_NOTBOL | PCRE_NOTEOL | PCRE_NOTEMPTY | PCRE_NOTEMPTY_ATSTART | PCRE_PARTIAL_SOFT | PCRE_PARTIAL_HARD), ovector32_1, 32, getstack32());
 			memset(&dummy_extra32, 0, sizeof(pcre32_extra));
 			dummy_extra32.flags = PCRE_EXTRA_MARK;
+			if (current->start_offset & F_STUDY) {
+				dummy_extra32.flags |= PCRE_EXTRA_STUDY_DATA;
+				dummy_extra32.study_data = extra32->study_data;
+			}
 			dummy_extra32.mark = &mark32_2;
 			return_value32[1] = pcre32_exec(re32, &dummy_extra32, regtest_buf32, length32, current->start_offset & OFFSET_MASK,
 				current->flags & (PCRE_NOTBOL | PCRE_NOTEOL | PCRE_NOTEMPTY | PCRE_NOTEMPTY_ATSTART | PCRE_PARTIAL_SOFT | PCRE_PARTIAL_HARD), ovector32_2, 32);

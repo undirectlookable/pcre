@@ -121,6 +121,12 @@ input mode under Windows. */
 #endif
 #endif
 
+#ifdef __VMS
+#include <ssdef.h>
+void vms_setsymbol( char *, char *, int );
+#endif
+
+
 #define PRIV(name) name
 
 /* We have to include pcre_internal.h because we need the internal info for
@@ -1316,7 +1322,7 @@ graph, print, punct, and cntrl. Other classes are built from combinations. */
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, /* 240-247 */
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};/* 248-255 */
 
-/* This is a set of tables that came orginally from a Windows user. It seems to
+/* This is a set of tables that came originally from a Windows user. It seems to
 be at least an approximation of ISO 8859. In particular, there are characters
 greater than 128 that are marked as spaces, letters, etc. */
 
@@ -1790,8 +1796,7 @@ Returns:       TRUE  if the string is a valid UTF-32 string
                FALSE otherwise
 */
 
-#ifdef NEVER
-
+#ifdef NEVER   /* Not used */
 #ifdef SUPPORT_UTF
 static BOOL
 valid_utf32(pcre_uint32 *string, int length)
@@ -1802,27 +1807,16 @@ register pcre_uint32 c;
 for (p = string; length-- > 0; p++)
   {
   c = *p;
-
-  if (c > 0x10ffffu)
-    return FALSE;
-
-  /* A surrogate */
-  if ((c & 0xfffff800u) == 0xd800u)
-    return FALSE;
-
-  /* Non-character */
-  if ((c & 0xfffeu) == 0xfffeu || (c >= 0xfdd0u && c <= 0xfdefu))
-    return FALSE;
+  if (c > 0x10ffffu) return FALSE;                 /* Too big */
+  if ((c & 0xfffff800u) == 0xd800u) return FALSE;  /* Surrogate */
   }
 
 return TRUE;
 }
 #endif /* SUPPORT_UTF */
-
 #endif /* NEVER */
+#endif /* SUPPORT_PCRE32 */
 
-
-#endif
 
 /*************************************************
 *        Read or extend an input line            *
@@ -2082,7 +2076,7 @@ while (length-- > 0)
   if (use_utf && c >= 0xD800 && c < 0xDC00 && length > 0)
     {
     int d = *p & 0xffff;
-    if (d >= 0xDC00 && d < 0xDFFF)
+    if (d >= 0xDC00 && d <= 0xDFFF)
       {
       c = ((c & 0x3ff) << 10) + (d & 0x3ff) + 0x10000;
       length--;
@@ -2401,7 +2395,7 @@ else
   rc = PCRE_ERROR_BADMODE;
 #endif
 
-if (rc < 0)
+if (rc < 0 && rc != PCRE_ERROR_UNSET)
   {
   fprintf(outfile, "Error %d from pcre%s_fullinfo(%d)\n", rc,
     pcre_mode == PCRE32_MODE ? "32" : pcre_mode == PCRE16_MODE ? "16" : "", option);
@@ -2477,14 +2471,18 @@ BOOL utf16_char = FALSE;
 re->magic_number = REVERSED_MAGIC_NUMBER;
 re->size = swap_uint32(re->size);
 re->options = swap_uint32(re->options);
-re->flags = swap_uint16(re->flags);
-re->top_bracket = swap_uint16(re->top_bracket);
-re->top_backref = swap_uint16(re->top_backref);
+re->flags = swap_uint32(re->flags);
+re->limit_match = swap_uint32(re->limit_match);
+re->limit_recursion = swap_uint32(re->limit_recursion);
 re->first_char = swap_uint16(re->first_char);
 re->req_char = swap_uint16(re->req_char);
+re->max_lookbehind = swap_uint16(re->max_lookbehind);
+re->top_bracket = swap_uint16(re->top_bracket);
+re->top_backref = swap_uint16(re->top_backref);
 re->name_table_offset = swap_uint16(re->name_table_offset);
 re->name_entry_size = swap_uint16(re->name_entry_size);
 re->name_count = swap_uint16(re->name_count);
+re->ref_count = swap_uint16(re->ref_count);
 
 if (extra != NULL)
   {
@@ -2654,14 +2652,18 @@ int length = re->name_count * re->name_entry_size;
 re->magic_number = REVERSED_MAGIC_NUMBER;
 re->size = swap_uint32(re->size);
 re->options = swap_uint32(re->options);
-re->flags = swap_uint16(re->flags);
-re->top_bracket = swap_uint16(re->top_bracket);
-re->top_backref = swap_uint16(re->top_backref);
+re->flags = swap_uint32(re->flags);
+re->limit_match = swap_uint32(re->limit_match);
+re->limit_recursion = swap_uint32(re->limit_recursion);
 re->first_char = swap_uint32(re->first_char);
 re->req_char = swap_uint32(re->req_char);
+re->max_lookbehind = swap_uint16(re->max_lookbehind);
+re->top_bracket = swap_uint16(re->top_bracket);
+re->top_backref = swap_uint16(re->top_backref);
 re->name_table_offset = swap_uint16(re->name_table_offset);
 re->name_entry_size = swap_uint16(re->name_entry_size);
 re->name_count = swap_uint16(re->name_count);
+re->ref_count = swap_uint16(re->ref_count);
 
 if (extra != NULL)
   {
@@ -3099,7 +3101,7 @@ while (argc > 1 && argv[op][0] == '-')
       ((stack_size = get_value((pcre_uint8 *)argv[op+1], &endptr)),
         *endptr == 0))
     {
-#if defined(_WIN32) || defined(WIN32) || defined(__minix) || defined(NATIVE_ZOS)
+#if defined(_WIN32) || defined(WIN32) || defined(__minix) || defined(NATIVE_ZOS) || defined(__VMS)
     printf("PCRE: -S not supported on this OS\n");
     exit(1);
 #else
@@ -3132,6 +3134,10 @@ while (argc > 1 && argv[op][0] == '-')
         (void)PCRE_CONFIG(PCRE_CONFIG_LINK_SIZE, &rc);
         printf("%d\n", rc);
         yield = rc;
+
+#ifdef __VMS
+        vms_setsymbol("LINKSIZE",0,yield );
+#endif
         }
       else if (strcmp(argv[op + 1], "pcre8") == 0)
         {
@@ -3142,7 +3148,9 @@ while (argc > 1 && argv[op][0] == '-')
         printf("0\n");
         yield = 0;
 #endif
-        goto EXIT;
+#ifdef __VMS
+        vms_setsymbol("PCRE8",0,yield );
+#endif
         }
       else if (strcmp(argv[op + 1], "pcre16") == 0)
         {
@@ -3153,7 +3161,9 @@ while (argc > 1 && argv[op][0] == '-')
         printf("0\n");
         yield = 0;
 #endif
-        goto EXIT;
+#ifdef __VMS
+        vms_setsymbol("PCRE16",0,yield );
+#endif
         }
       else if (strcmp(argv[op + 1], "pcre32") == 0)
         {
@@ -3164,9 +3174,11 @@ while (argc > 1 && argv[op][0] == '-')
         printf("0\n");
         yield = 0;
 #endif
-        goto EXIT;
+#ifdef __VMS
+        vms_setsymbol("PCRE32",0,yield );
+#endif
         }
-      if (strcmp(argv[op + 1], "utf") == 0)
+      else if (strcmp(argv[op + 1], "utf") == 0)
         {
 #ifdef SUPPORT_PCRE8
         if (pcre_mode == PCRE8_MODE)
@@ -3182,7 +3194,9 @@ while (argc > 1 && argv[op][0] == '-')
 #endif
         printf("%d\n", rc);
         yield = rc;
-        goto EXIT;
+#ifdef __VMS
+        vms_setsymbol("UTF",0,yield );
+#endif
         }
       else if (strcmp(argv[op + 1], "ucp") == 0)
         {
@@ -3519,11 +3533,11 @@ while (!done)
       PCRE_PATTERN_TO_HOST_BYTE_ORDER(rc, re, extra, NULL);
       if (rc == PCRE_ERROR_BADMODE)
         {
-        pcre_uint16 flags_in_host_byte_order;
+        pcre_uint32 flags_in_host_byte_order;
         if (REAL_PCRE_MAGIC(re) == MAGIC_NUMBER)
           flags_in_host_byte_order = REAL_PCRE_FLAGS(re);
         else
-          flags_in_host_byte_order = swap_uint16(REAL_PCRE_FLAGS(re));
+          flags_in_host_byte_order = swap_uint32(REAL_PCRE_FLAGS(re));
         /* Simulate the result of the function call below. */
         fprintf(outfile, "Error %d from pcre%s_fullinfo(%d)\n", rc,
           pcre_mode == PCRE32_MODE ? "32" : pcre_mode == PCRE16_MODE ? "16" : "",
@@ -3683,6 +3697,7 @@ while (!done)
       case 'Y': options |= PCRE_NO_START_OPTIMISE; break;
       case 'Z': debug_lengths = 0; break;
       case '8': options |= PCRE_UTF8; use_utf = 1; break;
+      case '9': options |= PCRE_NEVER_UTF; break;
       case '?': options |= PCRE_NO_UTF8_CHECK; break;
 
       case 'T':
@@ -4003,6 +4018,7 @@ while (!done)
       {
       unsigned long int all_options;
       pcre_uint32 first_char, need_char;
+      pcre_uint32 match_limit, recursion_limit;
       int count, backrefmax, first_char_set, need_char_set, okpartial, jchanged,
         hascrorlf, maxlookbehind;
       int nameentrysize, namecount;
@@ -4030,8 +4046,18 @@ while (!done)
         (int)size, (int)regex_gotten_store);
 
       fprintf(outfile, "Capturing subpattern count = %d\n", count);
+
       if (backrefmax > 0)
         fprintf(outfile, "Max back reference = %d\n", backrefmax);
+
+      if (maxlookbehind > 0)
+        fprintf(outfile, "Max lookbehind = %d\n", maxlookbehind);
+
+      if (new_info(re, NULL, PCRE_INFO_MATCHLIMIT, &match_limit) == 0)
+        fprintf(outfile, "Match limit = %u\n", match_limit);
+
+      if (new_info(re, NULL, PCRE_INFO_RECURSIONLIMIT, &recursion_limit) == 0)
+        fprintf(outfile, "Recursion limit = %u\n", recursion_limit);
 
       if (namecount > 0)
         {
@@ -4066,7 +4092,7 @@ while (!done)
       if (do_flip) all_options = swap_uint32(all_options);
 
       if (get_options == 0) fprintf(outfile, "No options\n");
-        else fprintf(outfile, "Options:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+        else fprintf(outfile, "Options:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
           ((get_options & PCRE_ANCHORED) != 0)? " anchored" : "",
           ((get_options & PCRE_CASELESS) != 0)? " caseless" : "",
           ((get_options & PCRE_EXTENDED) != 0)? " extended" : "",
@@ -4083,7 +4109,8 @@ while (!done)
           ((get_options & PCRE_UCP) != 0)? " ucp" : "",
           ((get_options & PCRE_NO_UTF8_CHECK) != 0)? " no_utf_check" : "",
           ((get_options & PCRE_NO_START_OPTIMIZE) != 0)? " no_start_optimize" : "",
-          ((get_options & PCRE_DUPNAMES) != 0)? " dupnames" : "");
+          ((get_options & PCRE_DUPNAMES) != 0)? " dupnames" : "",
+          ((get_options & PCRE_NEVER_UTF) != 0)? " never_utf" : "");
 
       if (jchanged) fprintf(outfile, "Duplicate name status changes\n");
 
@@ -4156,9 +4183,6 @@ while (!done)
           fprintf(outfile, "%s\n", caseless);
           }
         }
-
-      if (maxlookbehind > 0)
-        fprintf(outfile, "Max lookbehind = %d\n", maxlookbehind);
 
       /* Don't output study size; at present it is in any case a fixed
       value, but it varies, depending on the computer architecture, and
@@ -4387,7 +4411,8 @@ while (!done)
 
 #ifndef NOUTF
     /* Check that the data is well-formed UTF-8 if we're in UTF mode. To create
-       invalid input to pcre_exec, you must use \x?? or \x{} sequences. */
+    invalid input to pcre_exec, you must use \x?? or \x{} sequences. */
+
     if (use_utf)
       {
       pcre_uint8 *q;
@@ -4405,21 +4430,23 @@ while (!done)
 
 #ifdef SUPPORT_VALGRIND
     /* Mark the dbuffer as addressable but undefined again. */
+
     if (dbuffer != NULL)
       {
       VALGRIND_MAKE_MEM_UNDEFINED(dbuffer, dbuffer_size * CHAR_SIZE);
       }
 #endif
 
-    /* Allocate a buffer to hold the data line. len+1 is an upper bound on
-       the number of pcre_uchar units that will be needed. */
-    if (dbuffer == NULL || (size_t)len >= dbuffer_size)
+    /* Allocate a buffer to hold the data line; len+1 is an upper bound on
+    the number of pcre_uchar units that will be needed. */
+
+    while (dbuffer == NULL || (size_t)len >= dbuffer_size)
       {
       dbuffer_size *= 2;
       dbuffer = (pcre_uint8 *)realloc(dbuffer, dbuffer_size * CHAR_SIZE);
       if (dbuffer == NULL)
         {
-        fprintf(stderr, "pcretest: malloc(%d) failed\n", (int)dbuffer_size);
+        fprintf(stderr, "pcretest: realloc(%d) failed\n", (int)dbuffer_size);
         exit(1);
         }
       }
@@ -5016,7 +5043,7 @@ while (!done)
           DFA_WS_DIMENSION);
         if (count == 0)
           {
-          fprintf(outfile, "Matched, but too many subsidiary matches\n");
+          fprintf(outfile, "Matched, but offsets vector is too small to show all matches\n");
           count = use_size_offsets/2;
           }
         }
@@ -5029,7 +5056,8 @@ while (!done)
         if (count == 0)
           {
           fprintf(outfile, "Matched, but too many substrings\n");
-          count = use_size_offsets/3;
+          /* 2 is a special case; match can be returned */
+          count = (use_size_offsets == 2)? 1 : use_size_offsets/3;
           }
         }
 
@@ -5043,7 +5071,8 @@ while (!done)
 #if !defined NODFA
         if (all_use_dfa || use_dfa) maxcount = use_size_offsets/2; else
 #endif
-          maxcount = use_size_offsets/3;
+          /* 2 is a special case; match can be returned */
+          maxcount = (use_size_offsets == 2)? 1 : use_size_offsets/3;
 
         /* This is a check against a lunatic return value. */
 
@@ -5261,14 +5290,17 @@ while (!done)
           }
         }
 
-      /* There was a partial match */
+      /* There was a partial match. If the bumpalong point is not the same as
+      the first inspected character, show the offset explicitly. */
 
       else if (count == PCRE_ERROR_PARTIAL)
         {
-        if (markptr == NULL) fprintf(outfile, "Partial match");
-        else
+        fprintf(outfile, "Partial match");
+        if (use_size_offsets > 2 && use_offsets[0] != use_offsets[2])
+          fprintf(outfile, " at offset %d", use_offsets[2]);
+        if (markptr != NULL)
           {
-          fprintf(outfile, "Partial match, mark=");
+          fprintf(outfile, ", mark=");
           PCHARSV(markptr, 0, -1, outfile);
           }
         if (use_size_offsets > 1)
@@ -5480,6 +5512,10 @@ if (buffer32 != NULL) free(buffer32);
 #if !defined NODFA
 if (dfa_workspace != NULL)
   free(dfa_workspace);
+#endif
+
+#if defined(__VMS)
+  yield = SS$_NORMAL;  /* Return values via DCL symbols */
 #endif
 
 return yield;
