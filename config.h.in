@@ -236,6 +236,9 @@ them both to 0; an emulation function will be used. */
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
+/* Define to enable support for Just-In-Time compiling. */
+#undef SUPPORT_JIT
+
 /* Define to allow pcregrep to be linked with libbz2, so that it is able to
    handle .bz2 files. */
 #undef SUPPORT_LIBBZ2
@@ -247,7 +250,10 @@ them both to 0; an emulation function will be used. */
    handle .gz files. */
 #undef SUPPORT_LIBZ
 
-/* Define to enable support for Unicode properties */
+/* Define to enable JIT support in pcregrep. */
+#undef SUPPORT_PCREGREP_JIT
+
+/* Define to enable support for Unicode properties. */
 #undef SUPPORT_UCP
 
 /* Define to enable support for the UTF-8 Unicode encoding. This will work

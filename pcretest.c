@@ -112,11 +112,13 @@ to keep two copies, we include the source file here, changing the names of the
 external symbols to prevent clashes. */
 
 #define _pcre_ucp_gentype      ucp_gentype
+#define _pcre_ucp_typerange    ucp_typerange
 #define _pcre_utf8_table1      utf8_table1
 #define _pcre_utf8_table1_size utf8_table1_size
 #define _pcre_utf8_table2      utf8_table2
 #define _pcre_utf8_table3      utf8_table3
 #define _pcre_utf8_table4      utf8_table4
+#define _pcre_utf8_char_sizes  utf8_char_sizes
 #define _pcre_utt              utt
 #define _pcre_utt_size         utt_size
 #define _pcre_utt_names        utt_names
@@ -227,7 +229,8 @@ static const char *errtexts[] = {
   "invalid combination of newline options",
   "bad offset value",
   NULL,  /* SHORTUTF8 is handled specially */
-  "nested recursion at the same subject position"
+  "nested recursion at the same subject position",
+  "JIT stack limit reached"
 };
 
 
@@ -579,6 +582,14 @@ return sys_errlist[n];
 #endif /* HAVE_STRERROR */
 
 
+/*************************************************
+*         JIT memory callback                    *
+*************************************************/
+
+static pcre_jit_stack* jit_callback(void *arg)
+{
+return (pcre_jit_stack *)arg;
+}
 
 
 /*************************************************
@@ -987,8 +998,8 @@ return (cb->callout_number != callout_fail_id)? 0 :
 *            Local malloc functions              *
 *************************************************/
 
-/* Alternative malloc function, to test functionality and show the size of the
-compiled re. */
+/* Alternative malloc function, to test functionality and save the size of a
+compiled re. The show_malloc variable is set only during matching. */
 
 static void *new_malloc(size_t size)
 {
@@ -1005,7 +1016,6 @@ if (show_malloc)
   fprintf(outfile, "free             %p\n", block);
 free(block);
 }
-
 
 /* For recursion malloc/free, to test stacking calls */
 
@@ -1195,7 +1205,8 @@ printf("  -p       use POSIX interface\n");
 #endif
 printf("  -q       quiet: do not output PCRE version number at start\n");
 printf("  -S <n>   set stack size to <n> megabytes\n");
-printf("  -s       force each pattern to be studied\n"
+printf("  -s       force each pattern to be studied at basic level\n"
+       "  -s+      force each pattern to be studied, using JIT if available\n"
        "  -t       time compilation and execution\n");
 printf("  -t <n>   time compilation and execution, repeating <n> times\n");
 printf("  -tm      time execution (matching) only\n");
@@ -1223,7 +1234,8 @@ int timeit = 0;
 int timeitm = 0;
 int showinfo = 0;
 int showstore = 0;
-int force_study = 0;
+int force_study = -1;
+int force_study_options = 0;
 int quiet = 0;
 int size_offsets = 45;
 int size_offsets_max;
@@ -1236,6 +1248,9 @@ int done = 0;
 int all_use_dfa = 0;
 int yield = 0;
 int stack_size;
+
+pcre_jit_stack *jit_stack = NULL;
+
 
 /* These vectors store, end-to-end, a list of captured substring names. Assume
 that 1024 is plenty long enough for the few names we'll be testing. */
@@ -1273,7 +1288,12 @@ while (argc > 1 && argv[op][0] == '-')
   unsigned char *endptr;
 
   if (strcmp(argv[op], "-m") == 0) showstore = 1;
-  else if (strcmp(argv[op], "-s") == 0) force_study = 1;
+  else if (strcmp(argv[op], "-s") == 0) force_study = 0;
+  else if (strcmp(argv[op], "-s+") == 0)
+    {
+    force_study = 1;
+    force_study_options = PCRE_STUDY_JIT_COMPILE;
+    }
   else if (strcmp(argv[op], "-q") == 0) quiet = 1;
   else if (strcmp(argv[op], "-b") == 0) debug = 1;
   else if (strcmp(argv[op], "-i") == 0) showinfo = 1;
@@ -1338,6 +1358,11 @@ while (argc > 1 && argv[op][0] == '-')
     printf("  %sUTF-8 support\n", rc? "" : "No ");
     (void)pcre_config(PCRE_CONFIG_UNICODE_PROPERTIES, &rc);
     printf("  %sUnicode properties support\n", rc? "" : "No ");
+    (void)pcre_config(PCRE_CONFIG_JIT, &rc);
+    if (rc)
+      printf("  Just-in-time compiler support\n");
+    else
+      printf("  No just-in-time compiler support\n");
     (void)pcre_config(PCRE_CONFIG_NEWLINE, &rc);
     /* Note that these values are always the ASCII values, even
     in EBCDIC environments. CR is 13 and NL is 10. */
@@ -1538,7 +1563,7 @@ while (!done)
         {
         FAIL_READ:
         fprintf(outfile, "Failed to read data from %s\n", p);
-        if (extra != NULL) new_free(extra);
+        if (extra != NULL) pcre_free_study(extra);
         if (re != NULL) new_free(re);
         fclose(f);
         continue;
@@ -1604,7 +1629,6 @@ while (!done)
   /* Look for options after final delimiter */
 
   options = 0;
-  study_options = 0;
   log_store = showstore;  /* default from command line */
 
   while (*pp != 0)
@@ -1641,7 +1665,16 @@ while (!done)
 #endif
 
       case 'S':
-      if (do_study == 0) do_study = 1; else
+      if (do_study == 0)
+        {
+        do_study = 1;
+        if (*pp == '+')
+          {
+          study_options |= PCRE_STUDY_JIT_COMPILE;
+          pp++;
+          }
+        }
+      else
         {
         do_study = 0;
         no_force_study = 1;
@@ -1836,7 +1869,7 @@ while (!done)
     suppresses the effect of /S (used for a few test patterns where studying is
     never sensible). */
 
-    if (do_study || (force_study && !no_force_study))
+    if (do_study || (force_study >= 0 && !no_force_study))
       {
       if (timeit > 0)
         {
@@ -1844,14 +1877,14 @@ while (!done)
         clock_t time_taken;
         clock_t start_time = clock();
         for (i = 0; i < timeit; i++)
-          extra = pcre_study(re, study_options, &error);
+          extra = pcre_study(re, study_options | force_study_options, &error);
         time_taken = clock() - start_time;
-        if (extra != NULL) free(extra);
+        if (extra != NULL) pcre_free_study(extra);
         fprintf(outfile, "  Study time %.4f milliseconds\n",
           (((double)time_taken * 1000.0) / (double)timeit) /
             (double)CLOCKS_PER_SEC);
         }
-      extra = pcre_study(re, study_options, &error);
+      extra = pcre_study(re, study_options | force_study_options, &error);
       if (error != NULL)
         fprintf(outfile, "Failed to study: %s\n", error);
       else if (extra != NULL)
@@ -2079,7 +2112,7 @@ while (!done)
       when auto-callouts are involved, the output from runs with and without
       -s should be identical. */
 
-      if (do_study || (force_study && showinfo && !no_force_study))
+      if (do_study || (force_study >= 0 && showinfo && !no_force_study))
         {
         if (extra == NULL)
           fprintf(outfile, "Study returned NULL\n");
@@ -2122,6 +2155,22 @@ while (!done)
               }
             fprintf(outfile, "\n");
             }
+          }
+
+        /* Show this only if the JIT was set by /S, not by -s. */
+
+        if ((study_options & PCRE_STUDY_JIT_COMPILE) != 0)
+          {
+          int jit;
+          new_info(re, extra, PCRE_INFO_JIT, &jit);
+          if (jit)
+            fprintf(outfile, "JIT study was successful\n");
+          else
+#ifdef SUPPORT_JIT
+            fprintf(outfile, "JIT study was not successful\n");
+#else
+            fprintf(outfile, "JIT support is not available in this version of PCRE\n");
+#endif
           }
         }
       }
@@ -2176,7 +2225,7 @@ while (!done)
         }
 
       new_free(re);
-      if (extra != NULL) new_free(extra);
+      if (extra != NULL) pcre_free_study(extra);
       if (locale_set)
         {
         new_free((void *)tables);
@@ -2297,8 +2346,14 @@ while (!done)
           {
           unsigned char *pt = p;
           c = 0;
-          while (isxdigit(*(++pt)))
-            c = c * 16 + tolower(*pt) - ((isdigit(*pt))? '0' : 'W');
+
+          /* We used to have "while (isxdigit(*(++pt)))" here, but it fails
+          when isxdigit() is a macro that refers to its argument more than
+          once. This is banned by the C Standard, but apparently happens in at
+          least one MacOS environment. */
+
+          for (pt++; isxdigit(*pt); pt++)
+            c = c * 16 + tolower(*pt) - ((isdigit(*pt))? '0' : 'a' - 10);
           if (*pt == '}')
             {
             unsigned char buff8[8];
@@ -2328,7 +2383,7 @@ while (!done)
         c = 0;
         while (i++ < 2 && isxdigit(*p))
           {
-          c = c * 16 + tolower(*p) - ((isdigit(*p))? '0' : 'W');
+          c = c * 16 + tolower(*p) - ((isdigit(*p))? '0' : 'a' - 10);
           p++;
           }
         break;
@@ -2441,6 +2496,18 @@ while (!done)
           if (n < 0)
             fprintf(outfile, "no parentheses with name \"%s\"\n", getnamesptr);
           getnamesptr = npp;
+          }
+        continue;
+
+        case 'J':
+        while(isdigit(*p)) n = n * 10 + *p++ - '0';
+        if (extra != NULL
+            && (extra->flags & PCRE_EXTRA_EXECUTABLE_JIT) != 0
+            && extra->executable_jit != NULL)
+          {
+	  if (jit_stack != NULL) pcre_jit_stack_free(jit_stack);
+	  jit_stack = pcre_jit_stack_alloc(1, n * 1024);
+	  pcre_assign_jit_stack(extra, jit_callback, jit_stack);
           }
         continue;
 
@@ -2654,7 +2721,10 @@ while (!done)
 
       /* If find_match_limit is set, we want to do repeated matches with
       varying limits in order to find the minimum value for the match limit and
-      for the recursion limit. */
+      for the recursion limit. The match limits are relevant only to the normal
+      running of pcre_exec(), so disable the JIT optimization. This makes it
+      possible to run the same set of tests with and without JIT externally
+      requested. */
 
       if (find_match_limit)
         {
@@ -2663,6 +2733,7 @@ while (!done)
           extra = (pcre_extra *)malloc(sizeof(pcre_extra));
           extra->flags = 0;
           }
+        else extra->flags &= ~PCRE_EXTRA_EXECUTABLE_JIT;
 
         (void)check_match_limit(re, extra, bptr, len, start_offset,
           options|g_notempty, use_offsets, use_size_offsets,
@@ -2861,7 +2932,6 @@ while (!done)
               fprintf(outfile, "%2dL %s\n", i, stringlist[i]);
             if (stringlist[i] != NULL)
               fprintf(outfile, "string list not terminated by NULL\n");
-            /* free((void *)stringlist); */
             pcre_free_substring_list(stringlist);
             }
           }
@@ -3012,12 +3082,17 @@ while (!done)
 #endif
 
   if (re != NULL) new_free(re);
-  if (extra != NULL) new_free(extra);
+  if (extra != NULL) pcre_free_study(extra);
   if (locale_set)
     {
     new_free((void *)tables);
     setlocale(LC_CTYPE, "C");
     locale_set = 0;
+    }
+  if (jit_stack != NULL)
+    {
+    pcre_jit_stack_free(jit_stack);
+    jit_stack = NULL;
     }
   }
 

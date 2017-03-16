@@ -5,15 +5,22 @@
 # supported by pcregrep.
 
 # Set the C locale, so that sort(1) behaves predictably.
+
 LC_ALL=C
 export LC_ALL
+
+# Remove any non-default colouring that the caller may have set.
+
+unset PCREGREP_COLOUR PCREGREP_COLOR
+
+# Set the program to be tested, and valgrind settings when requested.
 
 pcregrep=`pwd`/pcregrep
 
 valgrind=
 while [ $# -gt 0 ] ; do
   case $1 in
-    valgrind) valgrind="valgrind -q --leak-check=no";;
+    valgrind) valgrind="valgrind -q --leak-check=no --smc-check=all";;
     *) echo "RunGrepTest: Unknown argument $1"; exit 1;;
   esac
   shift
@@ -28,12 +35,11 @@ fi
 
 $pcregrep -V
 
-cf="diff -ub"
-
 # Set up a suitable "diff" command for comparison. Some systems have a diff
 # that lacks a -u option. Try to deal with this; better do the test for the -b
 # option as well.
 
+cf="diff -ub"
 if diff -u /dev/null /dev/null; then
   if diff -ub /dev/null /dev/null; then cf="diff -ub"; else cf="diff -u"; fi
 else
@@ -41,13 +47,21 @@ else
 fi
 
 # If PCRE has been built in a directory other than the source directory, and
-# this test is being run from "make check" as usual, then $(srcdir) will be
-# set. If not, set it to the current directory. We then arrange to run the
-# pcregrep command in the source directory so that the file names that appear
-# in the output are always the same.
+# this test is being run from "make check" as usual, then $srcdir will be
+# set. If not, set it to the current or parent directory, whichever one
+# contains the test data. We then arrange to run the pcregrep command in the
+# source directory so that the file names that appear in the output are always
+# the same.
 
 if [ -z "$srcdir" -o ! -d "$srcdir/testdata" ] ; then
-  srcdir=.
+  if [ -d "./testdata" ] ; then
+    srcdir=.
+  elif [ -d "../testdata" ] ; then
+    srcdir=..
+  else
+    echo "Cannot find the testdata directory"
+    exit 1
+  fi
 fi
 
 # Check for the availability of UTF-8 support
@@ -305,11 +319,11 @@ echo "---------------------------- Test 61 -----------------------------" >>test
 echo "RC=$?" >>testtry
 
 echo "---------------------------- Test 62 -----------------------------" >>testtry
-(cd $srcdir; $valgrind $pcregrep --match-limit=1000 -M 'This is a file(.|\R)*file.' ./testdata/grepinput) >>testtry 2>&1
+(cd $srcdir; $valgrind $pcregrep --match-limit=1000 --no-jit -M 'This is a file(.|\R)*file.' ./testdata/grepinput) >>testtry 2>&1
 echo "RC=$?" >>testtry
 
 echo "---------------------------- Test 63 -----------------------------" >>testtry
-(cd $srcdir; $valgrind $pcregrep --recursion-limit=1000 -M 'This is a file(.|\R)*file.' ./testdata/grepinput) >>testtry 2>&1
+(cd $srcdir; $valgrind $pcregrep --recursion-limit=1000 --no-jit -M 'This is a file(.|\R)*file.' ./testdata/grepinput) >>testtry 2>&1
 echo "RC=$?" >>testtry
 
 echo "---------------------------- Test 64 ------------------------------" >>testtry

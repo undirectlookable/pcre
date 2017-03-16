@@ -18,6 +18,7 @@ dist_html_DATA = \
   doc/html/index.html \
   doc/html/pcre.html \
   doc/html/pcre-config.html \
+  doc/html/pcre_assign_jit_stack.html \
   doc/html/pcre_compile.html \
   doc/html/pcre_compile2.html \
   doc/html/pcre_config.html \
@@ -25,6 +26,7 @@ dist_html_DATA = \
   doc/html/pcre_copy_substring.html \
   doc/html/pcre_dfa_exec.html \
   doc/html/pcre_exec.html \
+  doc/html/pcre_free_study.html \
   doc/html/pcre_free_substring.html \
   doc/html/pcre_free_substring_list.html \
   doc/html/pcre_fullinfo.html \
@@ -34,6 +36,8 @@ dist_html_DATA = \
   doc/html/pcre_get_substring.html \
   doc/html/pcre_get_substring_list.html \
   doc/html/pcre_info.html \
+  doc/html/pcre_jit_stack_alloc.html \
+  doc/html/pcre_jit_stack_free.html \
   doc/html/pcre_maketables.html \
   doc/html/pcre_refcount.html \
   doc/html/pcre_study.html \
@@ -44,6 +48,8 @@ dist_html_DATA = \
   doc/html/pcrecompat.html \
   doc/html/pcredemo.html \
   doc/html/pcregrep.html \
+  doc/html/pcrejit.html \
+  doc/html/pcrelimits.html \
   doc/html/pcrematching.html \
   doc/html/pcrepartial.html \
   doc/html/pcrepattern.html \
@@ -53,7 +59,8 @@ dist_html_DATA = \
   doc/html/pcresample.html \
   doc/html/pcrestack.html \
   doc/html/pcresyntax.html \
-  doc/html/pcretest.html
+  doc/html/pcretest.html \
+  doc/html/pcreunicode.html
 
 pcrecpp_html = doc/html/pcrecpp.html
 dist_noinst_DATA = $(pcrecpp_html)
@@ -174,6 +181,7 @@ libpcre_la_SOURCES = \
   pcre_globals.c \
   pcre_info.c \
   pcre_internal.h \
+  pcre_jit_compile.c \
   pcre_maketables.c \
   pcre_newline.c \
   pcre_ord2utf8.c \
@@ -196,9 +204,37 @@ nodist_libpcre_la_SOURCES = \
 # pcre_chartables.c, used unless --enable-rebuild-chartables is specified.
 EXTRA_DIST += pcre_printint.src pcre_chartables.c.dist
 
+# The JIT compiler lives in a separate directory, but its files are #included
+# when pcre_jit_compile.c is processed, so they must be distributed.
+EXTRA_DIST += \
+  sljit/sljitConfig.h \
+  sljit/sljitConfigInternal.h \
+  sljit/sljitExecAllocator.c \
+  sljit/sljitLir.c \
+  sljit/sljitLir.h \
+  sljit/sljitNativeARM_Thumb2.c \
+  sljit/sljitNativeARM_v5.c \
+  sljit/sljitNativeMIPS_32.c \
+  sljit/sljitNativeMIPS_common.c \
+  sljit/sljitNativePPC_32.c \
+  sljit/sljitNativePPC_64.c \
+  sljit/sljitNativePPC_common.c \
+  sljit/sljitNativeX86_32.c \
+  sljit/sljitNativeX86_64.c \
+  sljit/sljitNativeX86_common.c \
+  sljit/sljitUtils.c
+
 libpcre_la_LDFLAGS = $(EXTRA_LIBPCRE_LDFLAGS)
 
 CLEANFILES += pcre_chartables.c
+
+## If JIT support is enabled, arrange for the JIT test program to run.
+if WITH_JIT
+TESTS += pcre_jit_test
+noinst_PROGRAMS += pcre_jit_test
+pcre_jit_test_SOURCES = pcre_jit_test.c
+pcre_jit_test_LDADD = libpcre.la
+endif # WITH_JIT
 
 ## A version of the main pcre library that has a posix re API.
 lib_LTLIBRARIES += libpcreposix.la
@@ -277,6 +313,8 @@ EXTRA_DIST += \
   testdata/testinput11 \
   testdata/testinput12 \
   testdata/testinput13 \
+  testdata/testinput14 \
+  testdata/testinput15 \
   testdata/testoutput1 \
   testdata/testoutput2 \
   testdata/testoutput3 \
@@ -290,6 +328,8 @@ EXTRA_DIST += \
   testdata/testoutput11 \
   testdata/testoutput12 \
   testdata/testoutput13 \
+  testdata/testoutput14 \
+  testdata/testoutput15 \
   testdata/wintestinput3 \
   testdata/wintestoutput3 \
   perltest.pl
@@ -321,7 +361,7 @@ test: check ;
 # nice DLL for Windows use". (It is used by the pcre.dll target.)
 DLL_OBJS= pcre_compile.o pcre_config.o \
 	pcre_dfa_exec.o pcre_exec.o pcre_fullinfo.o pcre_get.o \
-	pcre_globals.o pcre_info.o pcre_maketables.o \
+	pcre_globals.o pcre_info.o pcre_jit_compile.o pcre_maketables.o \
 	pcre_newline.o pcre_ord2utf8.o pcre_refcount.o \
 	pcre_study.o pcre_tables.o pcre_try_flipped.o \
 	pcre_ucd.o pcre_valid_utf8.o pcre_version.o \
@@ -345,6 +385,7 @@ endif
 dist_man_MANS = \
   doc/pcre.3 \
   doc/pcre-config.1 \
+  doc/pcre_assign_jit_stack.3 \
   doc/pcre_compile.3 \
   doc/pcre_compile2.3 \
   doc/pcre_config.3 \
@@ -352,6 +393,7 @@ dist_man_MANS = \
   doc/pcre_copy_substring.3 \
   doc/pcre_dfa_exec.3 \
   doc/pcre_exec.3 \
+  doc/pcre_free_study.3 \
   doc/pcre_free_substring.3 \
   doc/pcre_free_substring_list.3 \
   doc/pcre_fullinfo.3 \
@@ -361,6 +403,8 @@ dist_man_MANS = \
   doc/pcre_get_substring.3 \
   doc/pcre_get_substring_list.3 \
   doc/pcre_info.3 \
+  doc/pcre_jit_stack_alloc.3 \
+  doc/pcre_jit_stack_free.3 \
   doc/pcre_maketables.3 \
   doc/pcre_refcount.3 \
   doc/pcre_study.3 \
@@ -370,6 +414,8 @@ dist_man_MANS = \
   doc/pcrecallout.3 \
   doc/pcrecompat.3 \
   doc/pcregrep.1 \
+  doc/pcrejit.3 \
+  doc/pcrelimits.3 \
   doc/pcrematching.3 \
   doc/pcrepartial.3 \
   doc/pcrepattern.3 \
@@ -379,7 +425,8 @@ dist_man_MANS = \
   doc/pcresample.3 \
   doc/pcrestack.3 \
   doc/pcresyntax.3 \
-  doc/pcretest.1
+  doc/pcretest.1 \
+  doc/pcreunicode.3
 
 pcrecpp_man = doc/pcrecpp.3
 EXTRA_DIST += $(pcrecpp_man)
